@@ -1,0 +1,32 @@
+Syntax      = ( ( EmptyLine )* Definition newline )+ ( EmptyLine )*;
+Definition  = Identifier Whitespace "= " Expression ";";
+Expression  = Disjunct
+            | Except
+            | Conjunct;
+Disjunct    = Atom ( newline Whitespace "| " Atom )+;
+Except      = Atom ( newline Whitespace "- " Atom )+;
+Conjunct    = Item ( " " Item )*;
+Item        = ZeroOrOne
+            | ZeroOrMore
+            | OneOrMore
+            | Identifier
+            | Reserved
+            | Literal;
+Atom        = Identifier
+            | Reserved
+            | Literal;
+ZeroOrOne   = "( " Conjunct " )?";
+ZeroOrMore  = "( " Conjunct " )*";
+OneOrMore   = "( " Conjunct " )+";
+Identifier  = ( upper ( lower )* )+;
+Reserved    = ( lower )+;
+Literal     = DString
+            | SString;
+DString     = '"' ( NoDQuote )* '"';
+SString     = "'" ( NoSQuote )* "'";
+NoDQuote    = print
+            - '"';
+NoSQuote    = print
+            - "'";
+Whitespace  = ( blank )+;
+EmptyLine   = ( "#" ( print )* )? newline;
