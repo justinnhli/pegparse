@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-from argparse import ArgumentParser
 import re
 
 # TODO  have ASTNodes dynamically generate the match; saves memory from storing a string multiple times
@@ -35,12 +34,7 @@ REPETITION_MAPPING = {
 	"OneOrMore"  : "ONE-OR-MORE",
 }
 
-def create_parser(filepath):
-	with open(filepath, "r") as fd:
-		contents = "".join(fd.readlines())
-	return create_parser_from_BNF(contents)
-
-def create_parser_from_BNF(bnf):
+def create_parser(bnf):
 	ast_root, chars_parsed = PEGParser(EBNF_DEFS).parse(bnf, "Syntax")
 	if ast_root and chars_parsed == len(bnf):
 		return PEGParser(_ast2defs(ast_root))
@@ -279,25 +273,30 @@ def _ast2item(ast):
 		return ast.match, set()
 	assert False, "Unknown expression type '%s'" % (ast.term)
 
-def main():
-	arg_parser = ArgumentParser(usage="%(prog)s GRAMMAR_FILE")
-	arg_parser.set_defaults(verbose=False)
-	arg_parser.add_argument("grammar", metavar="GRAMMAR_FILE", action="store", help="EBNF grammar file",)
-	arg_parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="show what the parser is doing")
+if __name__ == "__main__":
+	from argparse import ArgumentParser, FileType
+	from sys import stdin
+	arg_parser = ArgumentParser()
+	arg_parser.add_argument("-g", "--grammar", dest="grammar", action="store",      help="EBNF grammar file",             nargs=2)
+	arg_parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="show what the parser is doing", default=False)
+	arg_parser.add_argument("text", metavar="TEXT_FILE", action="store", nargs="?", help="text file to be parsed", type=FileType("r"), default=stdin)
 	args = arg_parser.parse_args()
-
-	parser = PEGParser(EBNF_DEFS)
+	if args.grammar:
+		term = args.grammar[1]
+		with open(args.grammar[0], "r") as fd:
+			parser = create_parser(fd.read())
+		if not parser:
+			print("error: grammar file cannot be parsed")
+			exit(1)
+	else:
+		parser = PEGParser(EBNF_DEFS)
+		term = "Syntax"
 	parser.debug = args.verbose
-	with open(args.grammar, "r") as fd:
-		contents = "".join(fd.readlines())
-		length = len(contents)
-	ast_root, chars_parsed = parser.parse(contents, "Syntax")
-
-	if not ast_root or chars_parsed != length:
+	contents = args.text.read()
+	ast, chars_parsed = parser.parse(contents, term)
+	length = len(contents)
+	if not ast or chars_parsed != length:
 		print("failed: only parsed {} of {} characters\n".format(chars_parsed, length))
 		exit(1)
 	else:
-		ast_root.pretty_print()
-
-if __name__ == "__main__":
-	main()
+		ast.pretty_print()
