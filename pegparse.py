@@ -42,14 +42,14 @@ def create_parser(bnf):
 		return None
 
 class ASTNode:
-	def __init__(self, trm="", chldrn=None, mtch=None):
-		self.term = trm
-		self.children = chldrn
-		self.match = mtch
+	def __init__(self, term=None, children=None, match=None):
+		self.term = ("" if term is None else term)
+		self.children = children
+		self.match = match
 	def __bool__(self):
 		return self.term != ""
-	def first_descendant(self, descentry=""):
-		descentry = descentry.split("/")
+	def first_descendant(self, descentry=None):
+		descentry = ("*" if descentry is None else descentry).split("/")
 		result = self
 		for term in descentry:
 			if term == "*":
@@ -57,8 +57,8 @@ class ASTNode:
 			else:
 				result = [child for child in result.children if child.term == term][0]
 		return result
-	def descendants(self, descentry):
-		descentry = descentry.split("/")
+	def descendants(self, descentry=None):
+		descentry = ("*" if descentry is None else descentry).split("/")
 		cur_gen = [self]
 		for term in descentry:
 			next_gen = []
