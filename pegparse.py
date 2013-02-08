@@ -37,7 +37,7 @@ REPETITION_MAPPING = {
 def create_parser(bnf):
 	ast_root, chars_parsed = PEGParser(EBNF_DEFS).parse(bnf, "Syntax")
 	if ast_root and chars_parsed == len(bnf):
-		return PEGParser(_ast2defs(ast_root))
+		return PEGParser(_ast2defs(ast_root)), ast_root
 	else:
 		return None
 
@@ -277,17 +277,25 @@ if __name__ == "__main__":
 	from argparse import ArgumentParser, FileType
 	from sys import stdin
 	arg_parser = ArgumentParser()
-	arg_parser.add_argument("-g", "--grammar", dest="grammar", action="store",      help="EBNF grammar file",             nargs=2)
-	arg_parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", help="show what the parser is doing", default=False)
+	arg_parser.set_defaults(verbose=False)
+	arg_parser.add_argument("-e", dest="expression", action="store",      help="starting expression; if omitted, first defined symbol is used")
+	arg_parser.add_argument("-g", dest="grammar",    action="store",      help="EBNF grammar file")
+	arg_parser.add_argument("-v", dest="verbose",    action="store_true", help="show what the parser is doing")
 	arg_parser.add_argument("text", metavar="TEXT_FILE", action="store", nargs="?", help="text file to be parsed", type=FileType("r"), default=stdin)
 	args = arg_parser.parse_args()
 	if args.grammar:
-		term = args.grammar[1]
-		with open(args.grammar[0], "r") as fd:
-			parser = create_parser(fd.read())
+		with open(args.grammar, "r") as fd:
+			parser, ast = create_parser(fd.read())
 		if not parser:
 			print("error: grammar file cannot be parsed")
 			exit(1)
+		if args.expression:
+			if args.expression not in parser.custom_defs:
+				print("error: specified expression not defined")
+				exit(1)
+			term = args.expression
+		else:
+			term = ast.first_descendant("Definition/Identifier").match
 	else:
 		parser = PEGParser(EBNF_DEFS)
 		term = "Syntax"
