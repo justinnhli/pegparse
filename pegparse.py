@@ -235,7 +235,7 @@ def _ast2defs(ast):
 	used_defs = set()
 	for definition in ast.descendants("Definition"):
 		identifier = definition.first_descendant("Identifier").match
-		assert identifier not in definitions, "identifier " + identifier + " is defined multiple times\n"
+		assert identifier not in definitions, "identifier {} is defined multiple times\n".format(identifier)
 		expression = definition.first_descendant("Expression/*")
 		if expression.term == "Disjunct":
 			flattened, used = _ast2list(expression, "Atom", "OR")
@@ -250,7 +250,7 @@ def _ast2defs(ast):
 			used_defs |= used
 			definitions[identifier] = flattened
 		else:
-			assert False, "Unknown expression type '%s'" % (expression.term)
+			assert False, "Unknown expression type '{}'".format(expression.term)
 	undefined = used_defs - (PEGParser.CORE_DEFS.keys()) - set(definitions.keys())
 	assert len(undefined) == 0, "undefined identifiers: {}".format(", ".join(undefined))
 	return definitions
@@ -271,7 +271,7 @@ def _ast2item(ast):
 		return ast.match, set([ast.match])
 	elif ast.term == "Literal":
 		return ast.match, set()
-	assert False, "Unknown expression type '%s'" % (ast.term)
+	assert False, "Unknown expression type '{}'".format(ast.term)
 
 if __name__ == "__main__":
 	from argparse import ArgumentParser, FileType
