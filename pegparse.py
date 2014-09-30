@@ -273,7 +273,7 @@ def _ast2item(ast):
         return ast.match, set()
     assert False, "Unknown expression type '{}'".format(ast.term)
 
-if __name__ == "__main__":
+def main():
     from argparse import ArgumentParser, FileType
     from sys import stdin
     arg_parser = ArgumentParser()
@@ -308,3 +308,6 @@ if __name__ == "__main__":
         exit(1)
     else:
         ast.pretty_print()
+
+if __name__ == "__main__":
+    main()
