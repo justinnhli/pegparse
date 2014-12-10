@@ -35,11 +35,11 @@ REPETITION_MAPPING = {
 }
 
 def create_parser(bnf):
-    ast_root, chars_parsed = PEGParser(EBNF_DEFS).parse(bnf, "Syntax")
-    if ast_root and chars_parsed == len(bnf):
-        return PEGParser(_ast2defs(ast_root)), ast_root
-    else:
+    ast = PEGParser(EBNF_DEFS).parse(bnf, "Syntax")
+    if ast is None:
         return None
+    else:
+        return PEGParser(_ast2defs(ast))
 
 class ASTNode:
     def __init__(self, term=None, children=None, match=None):
@@ -101,17 +101,17 @@ class PEGParser:
             "ZERO-OR-MORE" : self.match_zero_or_more,
             "ONE-OR-MORE"  : self.match_one_or_more,
         }
-    def parse(self, string, term, complete=False):
+    def parse(self, string, term, allow_partial_parse=False):
         self.cache = {}
         self.indent = 0
         ast, parsed = self.dispatch(string, term, 0)
-        if complete:
+        if allow_partial_parse:
+            return ast, parsed
+        else:
             if ast and parsed == len(string):
                 return ast
             else:
                 return None
-        else:
-            return ast, parsed
     def dispatch(self, string, term, position=0):
         if not isinstance(term, tuple):
             self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
@@ -284,9 +284,11 @@ def main():
     arg_parser.add_argument("text", metavar="TEXT_FILE", action="store", nargs="?", help="text file to be parsed", type=FileType("r"), default=stdin)
     args = arg_parser.parse_args()
     if args.grammar:
+        grammar = ""
         with open(args.grammar, "r") as fd:
-            parser, ast = create_parser(fd.read())
-        if not parser:
+            grammar = fd.read()
+        parser = create_parser(grammar)
+        if parser is None:
             print("error: grammar file cannot be parsed")
             exit(1)
         if args.expression:
@@ -295,13 +297,13 @@ def main():
                 exit(1)
             term = args.expression
         else:
-            term = ast.first_descendant("Definition/Identifier").match
+            term = PEGParser(EBNF_DEFS).parse(grammar, "Syntax").first_descendant("Definition/Identifier").match
     else:
         parser = PEGParser(EBNF_DEFS)
         term = "Syntax"
     parser.debug = args.verbose
     contents = args.text.read()
-    ast, chars_parsed = parser.parse(contents, term)
+    ast, chars_parsed = parser.parse(contents, term, allow_partial_parse=True)
     length = len(contents)
     if not ast or chars_parsed != length:
         print("failed: only parsed {} of {} characters\n".format(chars_parsed, length))
