@@ -109,7 +109,7 @@ class PEGParser:
             if ast and parsed == len(string):
                 return ast
             else:
-                return ASTNode()
+                return None
         else:
             return ast, parsed
     def dispatch(self, string, term, position=0):
