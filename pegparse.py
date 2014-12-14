@@ -101,17 +101,16 @@ class PEGParser:
             "ZERO-OR-MORE" : self.match_zero_or_more,
             "ONE-OR-MORE"  : self.match_one_or_more,
         }
-    def parse(self, string, term, allow_partial_parse=False):
+    def parse(self, string, term):
+        ast, parsed = self.dispatch(string, term, 0)
+        if ast and parsed == len(string):
+            return ast
+        else:
+            return None
+    def partial_parse(self, string, term):
         self.cache = {}
         self.indent = 0
-        ast, parsed = self.dispatch(string, term, 0)
-        if allow_partial_parse:
-            return ast, parsed
-        else:
-            if ast and parsed == len(string):
-                return ast
-            else:
-                return None
+        return self.dispatch(string, term, 0)
     def dispatch(self, string, term, position=0):
         if not isinstance(term, tuple):
             self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
@@ -303,7 +302,7 @@ def main():
         term = "Syntax"
     parser.debug = args.verbose
     contents = args.text.read()
-    ast, chars_parsed = parser.parse(contents, term, allow_partial_parse=True)
+    ast, chars_parsed = parser.partial_parse(contents, term)
     length = len(contents)
     if not ast or chars_parsed != length:
         print("failed: only parsed {} of {} characters\n".format(chars_parsed, length))
