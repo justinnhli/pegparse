@@ -34,6 +34,11 @@ REPETITION_MAPPING = {
     "OneOrMore"  : "ONE-OR-MORE",
 }
 
+def create_parser_from_file(file):
+    with open(file) as fd:
+        ebnf = fd.read()
+    return create_parser(ebnf)
+
 def create_parser(bnf):
     ast = PEGParser(EBNF_DEFS).parse(bnf, "Syntax")
     if ast is None:
