@@ -64,7 +64,7 @@ class ASTNode:
                 if children:
                     result = children[0]
                 else:
-                    return None
+                    return []
         return result
     def descendants(self, descentry=None):
         descentry = ("*" if descentry is None else descentry).split("/")
