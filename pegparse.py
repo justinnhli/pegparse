@@ -282,14 +282,13 @@ def _ast2item(ast):
     assert False, "Unknown expression type '{}'".format(ast.term)
 
 def main():
-    from argparse import ArgumentParser, FileType
-    from sys import stdin
+    from argparse import ArgumentParser
+    from fileinput import input as fileinput
     arg_parser = ArgumentParser()
-    arg_parser.set_defaults(verbose=False)
-    arg_parser.add_argument("-e", dest="expression", action="store",      help="starting expression; if omitted, first defined symbol is used")
-    arg_parser.add_argument("-g", dest="grammar",    action="store",      help="EBNF grammar file")
-    arg_parser.add_argument("-v", dest="verbose",    action="store_true", help="show what the parser is doing")
-    arg_parser.add_argument("text", metavar="TEXT_FILE", action="store", nargs="?", help="text file to be parsed", type=FileType("r"), default=stdin)
+    arg_parser.add_argument("-e", dest="expression", help="starting expression; if omitted, first defined term is used")
+    arg_parser.add_argument("-g", dest="grammar", help="EBNF grammar file")
+    arg_parser.add_argument("-v", dest="verbose", default=False, action="store_true", help="show what the parser is doing")
+    arg_parser.add_argument("file", default="-", nargs="?", help="text file to be parsed")
     args = arg_parser.parse_args()
     if args.grammar:
         grammar = ""
@@ -310,7 +309,7 @@ def main():
         parser = PEGParser(EBNF_DEFS)
         term = "Syntax"
     parser.debug = args.verbose
-    contents = args.text.read()
+    contents = "".join(fileinput(files=args.file))
     ast, chars_parsed = parser.partial_parse(contents, term)
     length = len(contents)
     if not ast or chars_parsed != length:
