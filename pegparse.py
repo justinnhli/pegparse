@@ -60,7 +60,11 @@ class ASTNode:
             if term == "*":
                 result = result.children[0]
             else:
-                result = [child for child in result.children if child.term == term][0]
+                children = [child for child in result.children if child.term == term]
+                if children:
+                    result = children[0]
+                else:
+                    return None
         return result
     def descendants(self, descentry=None):
         descentry = ("*" if descentry is None else descentry).split("/")
