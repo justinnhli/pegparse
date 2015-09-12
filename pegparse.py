@@ -111,6 +111,8 @@ class PEGParser:
             "ONE-OR-MORE"  : self.match_one_or_more,
         }
     def parse(self, string, term):
+        self.cache = {}
+        self.indent = 0
         ast, parsed = self.dispatch(string, term, 0)
         if ast and parsed == len(string):
             return ast
