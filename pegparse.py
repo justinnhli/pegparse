@@ -96,6 +96,7 @@ class PEGParser:
         "print"   : r"[ -~]",
         "unicode" : r"[^\x00-\x7F]",
         "newline" : r"\n",
+        "tab"     : r"\t",
     }
     def __init__(self, syntax):
         self.custom_defs = syntax
