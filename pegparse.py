@@ -196,7 +196,7 @@ class PEGParser:
             for term in terms[2:]:
                 self.debug_print(term)
                 nast = self.dispatch(string, term, position)[0]
-                if nast:
+                if nast and ast.match == nast.match:
                     return self.fail(term, position)
             return ast, pos
         return self.fail(terms[1], position)
