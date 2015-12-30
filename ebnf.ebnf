@@ -2,22 +2,20 @@ Syntax      = ( ( EmptyLine )* Definition newline )+ ( EmptyLine )*;
 Definition  = Identifier Whitespace "= " Expression ";";
 Expression  = Disjunct
             | Except
-            | Conjunct;
+			| Conjunct;
+Conjunct    = Item ( " " Item )*;
 Disjunct    = Atom ( newline Whitespace "| " Atom )+;
 Except      = Atom ( newline Whitespace "- " Atom )+;
-Conjunct    = Item ( " " Item )*;
-Item        = ZeroOrOne
-            | ZeroOrMore
+Item        = ZeroOrMore
+            | ZeroOrOne
             | OneOrMore
-            | Identifier
-            | Reserved
-            | Literal;
+            | Atom;
+ZeroOrMore  = "( " Conjunct " )*";
+ZeroOrOne   = "( " Conjunct " )?";
+OneOrMore   = "( " Conjunct " )+";
 Atom        = Identifier
             | Reserved
             | Literal;
-ZeroOrOne   = "( " Conjunct " )?";
-ZeroOrMore  = "( " Conjunct " )*";
-OneOrMore   = "( " Conjunct " )+";
 Identifier  = ( upper ( lower )* )+;
 Reserved    = ( lower )+;
 Literal     = DString

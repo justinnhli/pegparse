@@ -2,33 +2,37 @@
 
 import re
 
-# TODO  have ASTNodes dynamically generate the match; saves memory from storing a string multiple times
-#           this can be done by storing the full string via variable capture in a function which takes substring start and end positions
+# TODO
+# have ASTNodes dynamically generate the match; saves memory from storing a string multiple times
+#   this can be done by storing the full string via variable capture in a function which takes substring start and end positions
 
 EBNF_DEFS = {
-    "Syntax"     : ("AND", ("ONE-OR-MORE", ("ZERO-OR-MORE", "EmptyLine"), "Definition", "newline"), ("ZERO-OR-MORE", "EmptyLine")),
-    "Definition" : ("AND", "Identifier", "Whitespace", "\"= \"", "Expression", "\";\""),
-    "Expression" : ("OR", "Disjunct", "Except", "Conjunct"),
-    "Disjunct"   : ("AND", "Atom", ("ONE-OR-MORE", "newline", "Whitespace", "\"| \"", "Atom")),
-    "Except"     : ("AND", "Atom", ("ONE-OR-MORE", "newline", "Whitespace", "\"- \"", "Atom")),
-    "Conjunct"   : ("AND", "Item", ("ZERO-OR-MORE", "\" \"", "Item")),
-    "Item"       : ("OR", "ZeroOrOne", "ZeroOrMore", "OneOrMore", "Identifier", "Reserved", "Literal"),
-    "Atom"       : ("OR", "Identifier", "Reserved", "Literal"),
-    "ZeroOrOne"  : ("AND", "\"( \"", "Conjunct", "\" )?\""),
-    "ZeroOrMore" : ("AND", "\"( \"", "Conjunct", "\" )*\""),
-    "OneOrMore"  : ("AND", "\"( \"", "Conjunct", "\" )+\""),
-    "Identifier" : ("AND", ("ONE-OR-MORE", "upper", ("ZERO-OR-MORE", "lower"))),
-    "Reserved"   : ("AND", ("ONE-OR-MORE", "lower")),
-    "Literal"    : ("OR", "DString", "SString"),
-    "DString"    : ("AND", "'\"'", ("ZERO-OR-MORE", "NoDQuote"), "'\"'"),
-    "SString"    : ("AND", "\"'\"", ("ZERO-OR-MORE", "NoSQuote"), "\"'\""),
-    "NoDQuote"   : ("NOT", "print", "'\"'"),
-    "NoSQuote"   : ("NOT", "print", "\"'\""),
-    "Whitespace" : ("AND", ("ONE-OR-MORE", "blank")),
-    "EmptyLine"  : ("AND", ("ZERO-OR-ONE", "\"#\"", ("ZERO-OR-MORE", "print")), "newline"),
+    'Syntax': ('AND', ('ONE-OR-MORE', ('AND', ('ZERO-OR-MORE', ('AND', 'EmptyLine')), 'Definition', 'newline')), ('ZERO-OR-MORE', ('AND', 'EmptyLine'))),
+    'Definition': ('AND', 'Identifier', 'Whitespace', '"= "', 'Expression', '";"'),
+    'Expression': ('OR', 'Disjunct', 'Except', 'Conjunct'),
+    'Conjunct': ('AND', 'Item', ('ZERO-OR-MORE', ('AND', '" "', 'Item'))),
+    'Disjunct': ('AND', 'Atom', ('ONE-OR-MORE', ('AND', 'newline', 'Whitespace', '"| "', 'Atom'))),
+    'Except': ('AND', 'Atom', ('ONE-OR-MORE', ('AND', 'newline', 'Whitespace', '"- "', 'Atom'))),
+    'Item': ('OR', 'ZeroOrMore', 'ZeroOrOne', 'OneOrMore', 'Atom'),
+    'ZeroOrMore': ('AND', '"( "', 'Conjunct', '" )*"'),
+    'ZeroOrOne': ('AND', '"( "', 'Conjunct', '" )?"'),
+    'OneOrMore': ('AND', '"( "', 'Conjunct', '" )+"'),
+    'Atom': ('OR', 'Identifier', 'Reserved', 'Literal'),
+    'Identifier': ('AND', ('ONE-OR-MORE', ('AND', 'upper', ('ZERO-OR-MORE', ('AND', 'lower'))))),
+    'Reserved': ('AND', ('ONE-OR-MORE', ('AND', 'lower'))),
+    'Literal': ('OR', 'DString', 'SString'),
+    'DString': ('AND', '\'"\'', ('ZERO-OR-MORE', ('AND', 'NoDQuote')), '\'"\''),
+    'SString': ('AND', '"\'"', ('ZERO-OR-MORE', ('AND', 'NoSQuote')), '"\'"'),
+    'NoDQuote': ('NOT', 'print', '\'"\''),
+    'NoSQuote': ('NOT', 'print', '"\'"'),
+    'Whitespace': ('AND', ('ONE-OR-MORE', ('AND', 'blank'))),
+    'EmptyLine': ('AND', ('ZERO-OR-ONE', ('AND', '"#"', ('ZERO-OR-MORE', ('AND', 'print')))), 'newline'),
 }
 
-REPETITION_MAPPING = {
+DESIGNATOR_MAPPING = {
+    "Conjunct"   : "AND",
+    "Disjunct"   : "OR",
+    "Except"     : "NOT",
     "ZeroOrMore" : "ZERO-OR-MORE",
     "ZeroOrOne"  : "ZERO-OR-ONE",
     "OneOrMore"  : "ONE-OR-MORE",
@@ -40,11 +44,7 @@ def create_parser_from_file(file):
     return create_parser(ebnf)
 
 def create_parser(bnf):
-    ast = PEGParser(EBNF_DEFS).parse(bnf, "Syntax")
-    if ast is None:
-        return None
-    else:
-        return PEGParser(_ast2defs(ast))
+    return PEGParser(EBNFWalker().parse(bnf))
 
 class ASTNode:
     def __init__(self, term=None, children=None, match=None):
@@ -118,7 +118,7 @@ class PEGParser:
         if ast and parsed == len(string):
             return ast
         else:
-            return None
+            raise SyntaxError('only parsed {} of {} characters in:\n{}\n'.format(parsed, len(string), string))
     def partial_parse(self, string, term):
         self.cache = {}
         self.indent = 0
@@ -141,34 +141,34 @@ class PEGParser:
         self.debug_print("unknown non-terminal: " + term)
         return self.fail(term, position)
     def match_zero_or_more(self, string, terms, position):
-        new_terms = tuple(["AND"] + list(terms[1:]))
+        terms = terms[1]
         children = []
         last_pos = position
-        ast, pos = self.dispatch(string, new_terms, position)
+        ast, pos = self.dispatch(string, terms, position)
         while ast:
             children.extend(ast.children)
             last_pos = pos
-            ast, pos = self.dispatch(string, new_terms, pos)
+            ast, pos = self.dispatch(string, terms, pos)
         return ASTNode("ZERO-OR-MORE", children, string[position:last_pos]), last_pos
     def match_zero_or_one(self, string, terms, position):
-        new_terms = tuple(["AND"] + list(terms[1:]))
-        ast, pos = self.dispatch(string, new_terms, position)
+        terms = terms[1]
+        ast, pos = self.dispatch(string, terms, position)
         if ast:
             return ast, pos
         return self.dispatch(string, "empty", position)
     def match_one_or_more(self, string, terms, position):
-        new_terms = tuple(["AND"] + list(terms[1:]))
-        ast, pos = self.dispatch(string, new_terms, position)
+        terms = terms[1]
+        ast, pos = self.dispatch(string, terms, position)
         if not ast:
             return ast, pos
         else:
             children = ast.children
             last_pos = pos
-            ast, pos = self.dispatch(string, new_terms, pos)
+            ast, pos = self.dispatch(string, terms, pos)
             while ast:
                 children.extend(ast.children)
                 last_pos = pos
-                ast, pos = self.dispatch(string, new_terms, pos)
+                ast, pos = self.dispatch(string, terms, pos)
             return ASTNode("ONE-OR-MORE", children, string[position:last_pos]), last_pos
     def match_and(self, string, terms, position):
         children = []
@@ -236,53 +236,86 @@ class PEGParser:
             self.debug_print("matched " + term + " at position " + str(position))
             ast = self.cache[term][position]
             return ast, position + len(ast.match)
-        return ASTNode(""), position
+        return ASTNode(), position
     def debug_print(self, obj):
         if self.debug:
             print("    " * self.indent + str(obj))
 
-def _ast2defs(ast):
-    definitions = {}
-    used_defs = set()
-    for definition in ast.descendants("Definition"):
-        identifier = definition.first_descendant("Identifier").match
-        assert identifier not in definitions, "identifier {} is defined multiple times\n".format(identifier)
-        expression = definition.first_descendant("Expression/*")
-        if expression.term == "Disjunct":
-            flattened, used = _ast2list(expression, "Atom", "OR")
-            used_defs |= used
-            definitions[identifier] = flattened
-        elif expression.term == "Except":
-            flattened, used = _ast2list(expression, "Atom", "NOT")
-            used_defs |= used
-            definitions[identifier] = flattened
-        elif expression.term == "Conjunct":
-            flattened, used = _ast2list(expression, "Item", "AND")
-            used_defs |= used
-            definitions[identifier] = flattened
+class ASTWalker:
+    class EmptySentinel:
+        pass
+    def __init__(self, parser, term):
+        self.parser = parser
+        self.term = term
+        self._terms_to_expand = set(term[6:] for term in dir(self) if term.startswith('parse_'))
+        noskips = list(self._terms_to_expand)
+        while noskips:
+            noskip = noskips.pop()
+            for term, definition in self.parser.custom_defs.items():
+                if term in self._terms_to_expand:
+                    continue
+                if ASTWalker.term_in_definition(noskip, definition):
+                    noskips.append(term)
+                    self._terms_to_expand.add(term)
+    def _postorder_traversal(self, ast, depth=0):
+        results = []
+        for child in ast.descendants('*'):
+            if child.term not in self._terms_to_expand:
+                continue
+            result, parsed = self._postorder_traversal(child, depth=depth+1)
+            if not isinstance(result, ASTWalker.EmptySentinel):
+                if parsed:
+                    results.append(result)
+                else:
+                    results.extend(result)
+        function = 'parse_' + ast.term
+        if hasattr(self, function):
+            return getattr(self, function)(ast, results), True
+        elif results:
+            return results, False
         else:
-            assert False, "Unknown expression type '{}'".format(expression.term)
-    undefined = used_defs - (PEGParser.CORE_DEFS.keys()) - set(definitions.keys())
-    assert len(undefined) == 0, "undefined identifiers: {}".format(", ".join(undefined))
-    return definitions
+            return ASTWalker.EmptySentinel(), False
+    def parse(self, text):
+        ast = self.parser.parse(text, self.term)
+        return self._postorder_traversal(ast)[0]
+    @staticmethod
+    def term_in_definition(term, definition):
+        return any((term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element))) for element in definition)
 
-def _ast2list(ast, descentry, operator):
-    flattened = []
-    used = set()
-    for descendant in ast.descendants(descentry):
-        item, used_ids = _ast2item(descendant.first_descendant("*"))
-        flattened.append(item)
-        used |= used_ids
-    return tuple([operator] + flattened), used
+class EBNFWalker(ASTWalker):
+    def __init__(self):
+        super().__init__(PEGParser(EBNF_DEFS), 'Syntax')
+    def flatten(self, ast, results):
+        return tuple((DESIGNATOR_MAPPING[ast.term], *results))
+    def parse_Syntax(self, ast, results):
+        return dict(results)
+    def parse_Definition(self, ast, results):
+        return tuple(results)
+    def parse_Disjunct(self, ast, results):
+        return self.flatten(ast, results)
+    def parse_Except(self, ast, results):
+        return self.flatten(ast, results)
+    def parse_Conjunct(self, ast, results):
+        return self.flatten(ast, results)
+    def parse_ZeroOrMore(self, ast, results):
+        return self.flatten(ast, results)
+    def parse_ZeroOrOne(self, ast, results):
+        return self.flatten(ast, results)
+    def parse_OneOrMore(self, ast, results):
+        return self.flatten(ast, results)
+    def parse_Reserved(self, ast, results):
+        return ast.match
+    def parse_Identifier(self, ast, results):
+        return ast.match
+    def parse_Literal(self, ast, results):
+        return ast.match
 
-def _ast2item(ast):
-    if ast.term in REPETITION_MAPPING:
-        return _ast2list(ast, "Conjunct/Item", REPETITION_MAPPING[ast.term])
-    elif ast.term in ("Identifier", "Reserved"):
-        return ast.match, set([ast.match])
-    elif ast.term == "Literal":
-        return ast.match, set()
-    assert False, "Unknown expression type '{}'".format(ast.term)
+def test():
+    import unittest
+    from os.path import dirname, join as join_path
+    with open(join_path(dirname(__file__), 'ebnf.ebnf')) as fd:
+        text = fd.read()
+    assert EBNFWalker().parse(text) == EBNF_DEFS
 
 def main():
     from argparse import ArgumentParser
