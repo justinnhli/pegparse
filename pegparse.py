@@ -104,6 +104,8 @@ class PEGParser:
         self.debug = False
         self.cache = {}
         self.indent = 0
+        self.trace = []
+        self.max_position = 0
         self.syntax_map = {
             "AND"          : self.match_and,
             "OR"           : self.match_or,
@@ -117,11 +119,21 @@ class PEGParser:
         if ast and parsed == len(string):
             return ast
         else:
-            raise SyntaxError('only parsed {} of {} characters in:\n{}\n'.format(parsed, len(string), string))
+            from textwrap import indent
+            trace = []
+            for position, term in self.trace:
+                trace.append('Failed to match {} at position {}'.format(term, position))
+                trace.append('  ' + re.sub(r"\n", r"\\n", string[position:position+32]))
+            message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
+            raise SyntaxError(message)
     def partial_parse(self, string, term):
         self.cache = {}
         self.indent = 0
-        return self.dispatch(string, term, 0)
+        self.trace = []
+        self.max_position = 0
+        ast, parsed = self.dispatch(string, term, 0)
+        self.trace = list(reversed(self.trace[1:]))
+        return ast, parsed
     def dispatch(self, string, term, position=0):
         if isinstance(term, tuple) and term[0] in self.syntax_map:
             return self.syntax_map[term[0]](string, term, position)
@@ -199,9 +211,12 @@ class PEGParser:
     def match_custom(self, string, term, position):
         expression = self.custom_defs[term]
         self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
+        max_position = self.max_position
         self.indent += 1
         ast = self.dispatch(string, expression, position)[0]
         self.indent -= 1
+        if self.max_position > max_position and (not ast or len(self.trace) > 1):
+            self.trace.append((position, term))
         if ast:
             if isinstance(expression, tuple) and expression[0] == "OR":
                 ast = ASTNode(term, [ast], ast.match)
@@ -223,18 +238,21 @@ class PEGParser:
         return self.fail(term, position)
     def fail(self, term, position):
         if term in self.custom_defs:
-            self.debug_print("failed to match " + str(term) + " at position " + str(position))
+            self.debug_print("failed to match {} at position {}".format(term, position))
         return ASTNode(), position
     def cache_and_return(self, term, position, ast):
-        self.cache.setdefault(term, {})
-        self.cache[term][position] = ast
+        self.cache[(term, position)] = ast
         return self.get_cached(term, position)
     def get_cached(self, term, position):
-        if (term in self.cache) and (position in self.cache[term]):
+        if (term, position) in self.cache:
             if term in self.custom_defs:
-                self.debug_print("matched " + term + " at position " + str(position))
-            ast = self.cache[term][position]
-            return ast, position + len(ast.match)
+                self.debug_print("matched {} at position {}".format(term, position))
+            ast = self.cache[(term, position)]
+            new_position = position + len(ast.match)
+            if new_position > self.max_position:
+                self.max_position = new_position
+                self.trace = [(position, term),]
+            return ast, new_position
         return ASTNode(), position
     def debug_print(self, obj):
         if self.debug:
@@ -342,13 +360,7 @@ def main():
         term = "Syntax"
     parser.debug = args.verbose
     contents = "".join(fileinput(files=args.file))
-    ast, chars_parsed = parser.partial_parse(contents, term)
-    length = len(contents)
-    if not ast or chars_parsed != length:
-        print("failed: only parsed {} of {} characters\n".format(chars_parsed, length))
-        exit(1)
-    else:
-        ast.pretty_print()
+    parser.parse(contents, term).pretty_print()
 
 if __name__ == "__main__":
     main()
