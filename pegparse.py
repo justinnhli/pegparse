@@ -118,14 +118,13 @@ class PEGParser:
         ast, parsed = self.partial_parse(string, term)
         if ast and parsed == len(string):
             return ast
-        else:
-            from textwrap import indent
-            trace = []
-            for position, term in self.trace:
-                trace.append('Failed to match {} at position {}'.format(term, position))
-                trace.append('  ' + re.sub(r"\n", r"\\n", string[position:position+32]))
-            message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
-            raise SyntaxError(message)
+        from textwrap import indent
+        trace = []
+        for position, term in self.trace:
+            trace.append('Failed to match {} at position {}'.format(term, position))
+            trace.append('  ' + re.sub(r"\n", r"\\n", string[position:position+32]))
+        message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
+        raise SyntaxError(message)
     def partial_parse(self, string, term):
         self.cache = {}
         self.indent = 0
@@ -170,15 +169,14 @@ class PEGParser:
         ast, pos = self.dispatch(string, terms, position)
         if not ast:
             return ast, pos
-        else:
-            children = ast.children
+        children = ast.children
+        last_pos = pos
+        ast, pos = self.dispatch(string, terms, pos)
+        while ast:
+            children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-            while ast:
-                children.extend(ast.children)
-                last_pos = pos
-                ast, pos = self.dispatch(string, terms, pos)
-            return ASTNode("ONE-OR-MORE", children, string[position:last_pos]), last_pos
+        return ASTNode("ONE-OR-MORE", children, string[position:last_pos]), last_pos
     def match_and(self, string, terms, position):
         children = []
         pos = position
@@ -201,13 +199,13 @@ class PEGParser:
         return ASTNode(), position
     def match_not(self, string, terms, position):
         ast, pos = self.dispatch(string, terms[1], position)
-        if ast:
-            for term in terms[2:]:
-                nast = self.dispatch(string, term, position)[0]
-                if nast and ast.match == nast.match:
-                    return self.fail(term, position)
-            return ast, pos
-        return self.fail(terms[1], position)
+        if not ast:
+            return self.fail(terms[1], position)
+        for term in terms[2:]:
+            nast = self.dispatch(string, term, position)[0]
+            if nast and ast.match == nast.match:
+                return self.fail(term, position)
+        return ast, pos
     def match_custom(self, string, term, position):
         expression = self.custom_defs[term]
         self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
@@ -217,14 +215,13 @@ class PEGParser:
         self.indent -= 1
         if self.max_position > max_position and (not ast or len(self.trace) > 1):
             self.trace.append((position, term))
-        if ast:
-            if isinstance(expression, tuple) and expression[0] == "OR":
-                ast = ASTNode(term, [ast], ast.match)
-            else:
-                ast.term = term
-            return self.cache_and_return(term, position, ast)
-        else:
+        if not ast:
             return self.fail(term, position)
+        if isinstance(expression, tuple) and expression[0] == "OR":
+            ast = ASTNode(term, [ast], ast.match)
+        else:
+            ast.term = term
+        return self.cache_and_return(term, position, ast)
     def match_core(self, string, term, position):
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
