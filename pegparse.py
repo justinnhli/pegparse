@@ -123,8 +123,6 @@ class PEGParser:
         self.indent = 0
         return self.dispatch(string, term, 0)
     def dispatch(self, string, term, position=0):
-        if not isinstance(term, tuple):
-            self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
         if isinstance(term, tuple) and term[0] in self.syntax_map:
             return self.syntax_map[term[0]](string, term, position)
         elif isinstance(term, str):
@@ -181,19 +179,18 @@ class PEGParser:
                     children.append(child_ast)
                 pos = child_pos
             else:
-                return self.fail(term, child_pos)
+                return ASTNode(), child_pos
         return ASTNode("AND", children, string[position:pos]), pos
     def match_or(self, string, terms, position):
         for term in terms[1:]:
             ast, pos = self.dispatch(string, term, position)
             if ast:
                 return ast, pos
-        return self.fail(terms[-1], position)
+        return ASTNode(), position
     def match_not(self, string, terms, position):
         ast, pos = self.dispatch(string, terms[1], position)
         if ast:
             for term in terms[2:]:
-                self.debug_print(term)
                 nast = self.dispatch(string, term, position)[0]
                 if nast and ast.match == nast.match:
                     return self.fail(term, position)
@@ -201,6 +198,7 @@ class PEGParser:
         return self.fail(terms[1], position)
     def match_custom(self, string, term, position):
         expression = self.custom_defs[term]
+        self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
         self.indent += 1
         ast = self.dispatch(string, expression, position)[0]
         self.indent -= 1
@@ -224,7 +222,8 @@ class PEGParser:
             return self.cache_and_return(term, position, ast)
         return self.fail(term, position)
     def fail(self, term, position):
-        self.debug_print("failed to match " + str(term) + " at position " + str(position))
+        if term in self.custom_defs:
+            self.debug_print("failed to match " + str(term) + " at position " + str(position))
         return ASTNode(), position
     def cache_and_return(self, term, position, ast):
         self.cache.setdefault(term, {})
@@ -232,7 +231,8 @@ class PEGParser:
         return self.get_cached(term, position)
     def get_cached(self, term, position):
         if (term in self.cache) and (position in self.cache[term]):
-            self.debug_print("matched " + term + " at position " + str(position))
+            if term in self.custom_defs:
+                self.debug_print("matched " + term + " at position " + str(position))
             ast = self.cache[term][position]
             return ast, position + len(ast.match)
         return ASTNode(), position
