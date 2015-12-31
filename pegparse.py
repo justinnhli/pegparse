@@ -311,7 +311,6 @@ class EBNFWalker(ASTWalker):
         return ast.match
 
 def test():
-    import unittest
     from os.path import dirname, join as join_path
     with open(join_path(dirname(__file__), 'ebnf.ebnf')) as fd:
         text = fd.read()
