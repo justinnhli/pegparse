@@ -113,9 +113,7 @@ class PEGParser:
             "ONE-OR-MORE"  : self.match_one_or_more,
         }
     def parse(self, string, term):
-        self.cache = {}
-        self.indent = 0
-        ast, parsed = self.dispatch(string, term, 0)
+        ast, parsed = self.partial_parse(string, term)
         if ast and parsed == len(string):
             return ast
         else:
@@ -271,13 +269,15 @@ class ASTWalker:
                     results.extend(result)
         function = 'parse_' + ast.term
         if hasattr(self, function):
-            return getattr(self, function)(ast, results), True
+            return getattr(self, function)(ast, tuple(results)), True
         elif results:
-            return results, False
+            return tuple(results), False
         else:
             return ASTWalker.EmptySentinel(), False
     def parse(self, text):
         ast = self.parser.parse(text, self.term)
+        return self.parse_ast(ast)
+    def parse_ast(self, ast):
         return self._postorder_traversal(ast)[0]
     @staticmethod
     def term_in_definition(term, definition):
