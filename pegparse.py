@@ -13,7 +13,8 @@ EBNF_DEFS = {
     'Conjunct': ('AND', 'Item', ('ZERO-OR-MORE', ('AND', '" "', 'Item'))),
     'Disjunct': ('AND', 'Atom', ('ONE-OR-MORE', ('AND', 'newline', 'Whitespace', '"| "', 'Atom'))),
     'Except': ('AND', 'Atom', ('ONE-OR-MORE', ('AND', 'newline', 'Whitespace', '"- "', 'Atom'))),
-    'Item': ('OR', 'ZeroOrMore', 'ZeroOrOne', 'OneOrMore', 'Atom'),
+    'Item': ('OR', 'Repetition', 'Atom'),
+    'Repetition': ('OR', 'ZeroOrMore', 'ZeroOrOne', 'OneOrMore'),
     'ZeroOrMore': ('AND', '"( "', 'Conjunct', '" )*"'),
     'ZeroOrOne': ('AND', '"( "', 'Conjunct', '" )?"'),
     'OneOrMore': ('AND', '"( "', 'Conjunct', '" )+"'),
@@ -297,12 +298,8 @@ class EBNFWalker(ASTWalker):
         return self.flatten(ast, results)
     def parse_Conjunct(self, ast, results):
         return self.flatten(ast, results)
-    def parse_ZeroOrMore(self, ast, results):
-        return self.flatten(ast, results)
-    def parse_ZeroOrOne(self, ast, results):
-        return self.flatten(ast, results)
-    def parse_OneOrMore(self, ast, results):
-        return self.flatten(ast, results)
+    def parse_Repetition(self, ast, results):
+        return self.flatten(ast.descendants('*')[0], results)
     def parse_Reserved(self, ast, results):
         return ast.match
     def parse_Identifier(self, ast, results):

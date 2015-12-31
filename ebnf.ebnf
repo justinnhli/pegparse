@@ -6,10 +6,11 @@ Expression  = Disjunct
 Conjunct    = Item ( " " Item )*;
 Disjunct    = Atom ( newline Whitespace "| " Atom )+;
 Except      = Atom ( newline Whitespace "- " Atom )+;
-Item        = ZeroOrMore
-            | ZeroOrOne
-            | OneOrMore
+Item        = Repetition
             | Atom;
+Repetition  = ZeroOrMore
+            | ZeroOrOne
+            | OneOrMore;
 ZeroOrMore  = "( " Conjunct " )*";
 ZeroOrOne   = "( " Conjunct " )?";
 OneOrMore   = "( " Conjunct " )+";
