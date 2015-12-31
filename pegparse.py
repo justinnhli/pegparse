@@ -31,12 +31,12 @@ EBNF_DEFS = {
 }
 
 DESIGNATOR_MAPPING = {
-    "Conjunct"   : "AND",
-    "Disjunct"   : "OR",
-    "Except"     : "NOT",
-    "ZeroOrMore" : "ZERO-OR-MORE",
-    "ZeroOrOne"  : "ZERO-OR-ONE",
-    "OneOrMore"  : "ONE-OR-MORE",
+    'Conjunct'   : 'AND',
+    'Disjunct'   : 'OR',
+    'Except'     : 'NOT',
+    'ZeroOrMore' : 'ZERO-OR-MORE',
+    'ZeroOrOne'  : 'ZERO-OR-ONE',
+    'OneOrMore'  : 'ONE-OR-MORE',
 }
 
 def create_parser_from_file(file):
@@ -49,16 +49,16 @@ def create_parser(bnf):
 
 class ASTNode:
     def __init__(self, term=None, children=None, match=None):
-        self.term = ("" if term is None else term)
+        self.term = ('' if term is None else term)
         self.children = children
         self.match = match
     def __bool__(self):
-        return self.term != ""
+        return self.term != ''
     def first_descendant(self, descentry=None):
-        descentry = ("*" if descentry is None else descentry).split("/")
+        descentry = ('*' if descentry is None else descentry).split('/')
         result = self
         for term in descentry:
-            if term == "*":
+            if term == '*':
                 result = result.children[0]
             else:
                 children = [child for child in result.children if child.term == term]
@@ -68,36 +68,36 @@ class ASTNode:
                     return []
         return result
     def descendants(self, descentry=None):
-        descentry = ("*" if descentry is None else descentry).split("/")
+        descentry = ('*' if descentry is None else descentry).split('/')
         cur_gen = [self]
         for term in descentry:
             next_gen = []
             for adult in cur_gen:
                 next_gen.extend(adult.children)
-            if term == "*":
+            if term == '*':
                 cur_gen = next_gen
             else:
                 cur_gen = [child for child in next_gen if child.term == term]
         return cur_gen
     def pretty_print(self, indent=0):
-        print("{}{}: {}".format("    " * indent, self.term, re.sub(r"\n", r"\\n", str(self.match))))
+        print('{}{}: {}'.format('    ' * indent, self.term, re.sub(r'\n', r'\\n', str(self.match))))
         for child in self.children:
             child.pretty_print(indent + 1)
 
 class PEGParser:
     CORE_DEFS = {
-        "empty"   : r"",
-        "blank"   : r"[ \t]",
-        "digit"   : r"[0-9]",
-        "upper"   : r"[A-Z]",
-        "lower"   : r"[a-z]",
-        "alpha"   : r"[A-Za-z]",
-        "alnum"   : r"[0-9A-Za-z]",
-        "punct"   : r"[-!\"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]",
-        "print"   : r"[ -~]",
-        "unicode" : r"[^\x00-\x7F]",
-        "newline" : r"\n",
-        "tab"     : r"\t",
+        'empty'   : r'',
+        'blank'   : r'[ \t]',
+        'digit'   : r'[0-9]',
+        'upper'   : r'[A-Z]',
+        'lower'   : r'[a-z]',
+        'alpha'   : r'[A-Za-z]',
+        'alnum'   : r'[0-9A-Za-z]',
+        'punct'   : r"[-!\"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]",
+        'print'   : r'[ -~]',
+        'unicode' : r'[^\x00-\x7F]',
+        'newline' : r'\n',
+        'tab'     : r'\t',
     }
     def __init__(self, syntax):
         self.custom_defs = syntax
@@ -107,12 +107,12 @@ class PEGParser:
         self.trace = []
         self.max_position = 0
         self.syntax_map = {
-            "AND"          : self.match_and,
-            "OR"           : self.match_or,
-            "NOT"          : self.match_not,
-            "ZERO-OR-ONE"  : self.match_zero_or_one,
-            "ZERO-OR-MORE" : self.match_zero_or_more,
-            "ONE-OR-MORE"  : self.match_one_or_more,
+            'AND'          : self.match_and,
+            'OR'           : self.match_or,
+            'NOT'          : self.match_not,
+            'ZERO-OR-ONE'  : self.match_zero_or_one,
+            'ZERO-OR-MORE' : self.match_zero_or_more,
+            'ONE-OR-MORE'  : self.match_one_or_more,
         }
     def parse(self, string, term):
         ast, parsed = self.partial_parse(string, term)
@@ -122,7 +122,7 @@ class PEGParser:
         trace = []
         for position, term in self.trace:
             trace.append('Failed to match {} at position {}'.format(term, position))
-            trace.append('  ' + re.sub(r"\n", r"\\n", string[position:position+32]))
+            trace.append('  ' + re.sub(r'\n', r'\\n', string[position:position+32]))
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
     def partial_parse(self, string, term):
@@ -146,7 +146,7 @@ class PEGParser:
                 return self.match_core(string, term, position)
             elif re.match(r"^'[^']*'$", term) or re.match(r'^"[^"]*"$', term):
                 return self.match_literal(string, term, position)
-        self.debug_print("unknown non-terminal: " + term)
+        self.debug_print('unknown non-terminal: ' + term)
         return self.fail(term, position)
     def match_zero_or_more(self, string, terms, position):
         terms = terms[1]
@@ -157,13 +157,13 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-        return ASTNode("ZERO-OR-MORE", children, string[position:last_pos]), last_pos
+        return ASTNode('ZERO-OR-MORE', children, string[position:last_pos]), last_pos
     def match_zero_or_one(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
         if ast:
             return ast, pos
-        return self.dispatch(string, "empty", position)
+        return self.dispatch(string, 'empty', position)
     def match_one_or_more(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
@@ -176,21 +176,21 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-        return ASTNode("ONE-OR-MORE", children, string[position:last_pos]), last_pos
+        return ASTNode('ONE-OR-MORE', children, string[position:last_pos]), last_pos
     def match_and(self, string, terms, position):
         children = []
         pos = position
         for term in terms[1:]:
             child_ast, child_pos = self.dispatch(string, term, pos)
             if child_ast:
-                if isinstance(term, tuple) and (term[0] in ["ZERO-OR-ONE", "ZERO-OR-MORE", "ONE-OR-MORE"]):
+                if isinstance(term, tuple) and (term[0] in ('ZERO-OR-ONE', 'ZERO-OR-MORE', 'ONE-OR-MORE')):
                     children.extend(child_ast.children)
                 else:
                     children.append(child_ast)
                 pos = child_pos
             else:
                 return ASTNode(), child_pos
-        return ASTNode("AND", children, string[position:pos]), pos
+        return ASTNode('AND', children, string[position:pos]), pos
     def match_or(self, string, terms, position):
         for term in terms[1:]:
             ast, pos = self.dispatch(string, term, position)
@@ -208,7 +208,7 @@ class PEGParser:
         return ast, pos
     def match_custom(self, string, term, position):
         expression = self.custom_defs[term]
-        self.debug_print("parse called at position {} with {} >>>{}".format(position, term, re.sub(r"\n", r"\\n", string[position:position+32])))
+        self.debug_print('parse called at position {} with {} >>>{}'.format(position, term, re.sub(r'\n', r'\\n', string[position:position+32])))
         max_position = self.max_position
         self.indent += 1
         ast = self.dispatch(string, expression, position)[0]
@@ -217,7 +217,7 @@ class PEGParser:
             self.trace.append((position, term))
         if not ast:
             return self.fail(term, position)
-        if isinstance(expression, tuple) and expression[0] == "OR":
+        if isinstance(expression, tuple) and expression[0] == 'OR':
             ast = ASTNode(term, [ast], ast.match)
         else:
             ast.term = term
@@ -235,7 +235,7 @@ class PEGParser:
         return self.fail(term, position)
     def fail(self, term, position):
         if term in self.custom_defs:
-            self.debug_print("failed to match {} at position {}".format(term, position))
+            self.debug_print('failed to match {} at position {}'.format(term, position))
         return ASTNode(), position
     def cache_and_return(self, term, position, ast):
         self.cache[(term, position)] = ast
@@ -243,7 +243,7 @@ class PEGParser:
     def get_cached(self, term, position):
         if (term, position) in self.cache:
             if term in self.custom_defs:
-                self.debug_print("matched {} at position {}".format(term, position))
+                self.debug_print('matched {} at position {}'.format(term, position))
             ast = self.cache[(term, position)]
             new_position = position + len(ast.match)
             if new_position > self.max_position:
@@ -253,7 +253,7 @@ class PEGParser:
         return ASTNode(), position
     def debug_print(self, obj):
         if self.debug:
-            print("    " * self.indent + str(obj))
+            print('    ' * self.indent + str(obj))
 
 class ASTWalker:
     class EmptySentinel:
@@ -332,32 +332,32 @@ def main():
     from argparse import ArgumentParser
     from fileinput import input as fileinput
     arg_parser = ArgumentParser()
-    arg_parser.add_argument("-e", dest="expression", help="starting expression; if omitted, first defined term is used")
-    arg_parser.add_argument("-g", dest="grammar", help="EBNF grammar file")
-    arg_parser.add_argument("-v", dest="verbose", default=False, action="store_true", help="show what the parser is doing")
-    arg_parser.add_argument("file", default="-", nargs="?", help="text file to be parsed")
+    arg_parser.add_argument('-e', dest='expression', help='starting expression; if omitted, first defined term is used')
+    arg_parser.add_argument('-g', dest='grammar', help='EBNF grammar file')
+    arg_parser.add_argument('-v', dest='verbose', default=False, action='store_true', help='show what the parser is doing')
+    arg_parser.add_argument('file', default='-', nargs='?', help='text file to be parsed')
     args = arg_parser.parse_args()
     if args.grammar:
-        grammar = ""
-        with open(args.grammar, "r") as fd:
+        grammar = ''
+        with open(args.grammar, 'r') as fd:
             grammar = fd.read()
         parser = create_parser(grammar)
         if parser is None:
-            print("error: grammar file cannot be parsed")
+            print('error: grammar file cannot be parsed')
             exit(1)
         if args.expression:
             if args.expression not in parser.custom_defs:
-                print("error: specified expression not defined")
+                print('error: specified expression not defined')
                 exit(1)
             term = args.expression
         else:
-            term = PEGParser(EBNF_DEFS).parse(grammar, "Syntax").first_descendant("Definition/Identifier").match
+            term = PEGParser(EBNF_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
     else:
         parser = PEGParser(EBNF_DEFS)
-        term = "Syntax"
+        term = 'Syntax'
     parser.debug = args.verbose
-    contents = "".join(fileinput(files=args.file))
+    contents = ''.join(fileinput(files=args.file))
     parser.parse(contents, term).pretty_print()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
