@@ -94,7 +94,7 @@ class PEGParser:
         self.custom_defs = syntax
         self.debug = False
         self.cache = {}
-        self.indent = 0
+        self.depth = 0
         self.trace = []
         self.max_position = 0
     def parse(self, string, term):
@@ -110,7 +110,7 @@ class PEGParser:
         raise SyntaxError(message)
     def partial_parse(self, string, term):
         self.cache = {}
-        self.indent = 0
+        self.depth = 0
         self.trace = []
         self.max_position = 0
         ast, parsed = self.dispatch(string, term, 0)
@@ -193,9 +193,9 @@ class PEGParser:
         expression = self.custom_defs[term]
         self.debug_print('parse called at position {} with {} >>>{}'.format(position, term, re.sub(r'\n', r'\\n', string[position:position+32])))
         max_position = self.max_position
-        self.indent += 1
+        self.depth += 1
         ast = self.dispatch(string, expression, position)[0]
-        self.indent -= 1
+        self.depth -= 1
         if self.max_position > max_position and (not ast or len(self.trace) > 1):
             self.trace.append((position, term))
         if not ast:
@@ -236,7 +236,7 @@ class PEGParser:
         return ASTNode(), position
     def debug_print(self, obj):
         if self.debug:
-            print('    ' * self.indent + str(obj))
+            print('    ' * self.depth + str(obj))
 
 class ASTWalker:
     class EmptySentinel:
