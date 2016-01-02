@@ -61,23 +61,23 @@ class ASTNode:
             if term == '*':
                 result = result.children[0]
             else:
-                children = [child for child in result.children if child.term == term]
+                children = tuple(child for child in result.children if child.term == term)
                 if children:
                     result = children[0]
                 else:
-                    return []
+                    return ()
         return result
     def descendants(self, descentry=None):
         descentry = ('*' if descentry is None else descentry).split('/')
-        cur_gen = [self]
+        cur_gen = (self,)
         for term in descentry:
             next_gen = []
             for adult in cur_gen:
                 next_gen.extend(adult.children)
             if term == '*':
-                cur_gen = next_gen
+                cur_gen = tuple(next_gen)
             else:
-                cur_gen = [child for child in next_gen if child.term == term]
+                cur_gen = tuple(child for child in next_gen if child.term == term)
         return cur_gen
     def pretty_print(self, indent=0):
         print('{}{}: {}'.format('    ' * indent, self.term, re.sub(r'\n', r'\\n', str(self.match))))
