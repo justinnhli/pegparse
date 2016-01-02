@@ -314,7 +314,7 @@ class EBNFWalker(ASTWalker):
     def parse_Conjunct(self, ast, results):
         return self.flatten(ast, results)
     def parse_Repetition(self, ast, results):
-        return self.flatten(ast.descendants('*')[0], results)
+        return self.flatten(ast.first_descendant('*'), results)
     def parse_Reserved(self, ast, results):
         return ast.match
     def parse_Identifier(self, ast, results):
