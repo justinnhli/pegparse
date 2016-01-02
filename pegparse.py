@@ -77,18 +77,18 @@ class ASTNode:
 
 class PEGParser:
     CORE_DEFS = {
-        'empty'   : r'',
-        'blank'   : r'[ \t]',
-        'digit'   : r'[0-9]',
-        'upper'   : r'[A-Z]',
-        'lower'   : r'[a-z]',
-        'alpha'   : r'[A-Za-z]',
-        'alnum'   : r'[0-9A-Za-z]',
-        'punct'   : r"[-!\"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]",
-        'print'   : r'[ -~]',
-        'unicode' : r'[^\x00-\x7F]',
-        'newline' : r'\n',
-        'tab'     : r'\t',
+        'empty': r'',
+        'blank': r'[ \t]',
+        'digit': r'[0-9]',
+        'upper': r'[A-Z]',
+        'lower': r'[a-z]',
+        'alpha': r'[A-Za-z]',
+        'alnum': r'[0-9A-Za-z]',
+        'punct': r"[-!\"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]",
+        'print': r'[ -~]',
+        'unicode': r'[^\x00-\x7F]',
+        'newline': r'\n',
+        'tab': r'\t',
     }
     def __init__(self, syntax):
         self.custom_defs = syntax
