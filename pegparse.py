@@ -49,11 +49,11 @@ def create_parser(bnf):
 
 class ASTNode:
     def __init__(self, term=None, children=None, match=None):
-        self.term = ('' if term is None else term)
+        self.term = term
         self.children = children
         self.match = match
     def __bool__(self):
-        return self.term != ''
+        return self.term is not None
     def first_descendant(self, descentry=None):
         descentry = ('*' if descentry is None else descentry).split('/')
         result = self
