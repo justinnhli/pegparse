@@ -7,36 +7,27 @@ import re
 #   this can be done by storing the full string via variable capture in a function which takes substring start and end positions
 
 EBNF_DEFS = {
-    'Syntax': ('AND', ('ONE-OR-MORE', ('AND', ('ZERO-OR-MORE', ('AND', 'EmptyLine')), 'Definition', 'newline')), ('ZERO-OR-MORE', ('AND', 'EmptyLine'))),
-    'Definition': ('AND', 'Identifier', 'Whitespace', '"= "', 'Expression', '";"'),
-    'Expression': ('OR', 'Disjunct', 'Except', 'Conjunct'),
-    'Conjunct': ('AND', 'Item', ('ZERO-OR-MORE', ('AND', '" "', 'Item'))),
-    'Disjunct': ('AND', 'Atom', ('ONE-OR-MORE', ('AND', 'newline', 'Whitespace', '"| "', 'Atom'))),
-    'Except': ('AND', 'Atom', ('ONE-OR-MORE', ('AND', 'newline', 'Whitespace', '"- "', 'Atom'))),
-    'Item': ('OR', 'Repetition', 'Atom'),
-    'Repetition': ('OR', 'ZeroOrMore', 'ZeroOrOne', 'OneOrMore'),
-    'ZeroOrMore': ('AND', '"( "', 'Conjunct', '" )*"'),
-    'ZeroOrOne': ('AND', '"( "', 'Conjunct', '" )?"'),
-    'OneOrMore': ('AND', '"( "', 'Conjunct', '" )+"'),
-    'Atom': ('OR', 'Identifier', 'Reserved', 'Literal'),
-    'Identifier': ('AND', ('ONE-OR-MORE', ('AND', 'upper', ('ZERO-OR-MORE', ('AND', 'lower'))))),
-    'Reserved': ('AND', ('ONE-OR-MORE', ('AND', 'lower'))),
-    'Literal': ('OR', 'DString', 'SString'),
-    'DString': ('AND', '\'"\'', ('ZERO-OR-MORE', ('AND', 'NoDQuote')), '\'"\''),
-    'SString': ('AND', '"\'"', ('ZERO-OR-MORE', ('AND', 'NoSQuote')), '"\'"'),
-    'NoDQuote': ('NOT', 'print', '\'"\''),
-    'NoSQuote': ('NOT', 'print', '"\'"'),
-    'Whitespace': ('AND', ('ONE-OR-MORE', ('AND', 'blank'))),
-    'EmptyLine': ('AND', ('ZERO-OR-ONE', ('AND', '"#"', ('ZERO-OR-MORE', ('AND', 'print')))), 'newline'),
-}
-
-DESIGNATOR_MAPPING = {
-    'Conjunct'   : 'AND',
-    'Disjunct'   : 'OR',
-    'Except'     : 'NOT',
-    'ZeroOrMore' : 'ZERO-OR-MORE',
-    'ZeroOrOne'  : 'ZERO-OR-ONE',
-    'OneOrMore'  : 'ONE-OR-MORE',
+    'Syntax': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', ('ZEROORMORE', ('CONJUNCT', 'EmptyLine')), 'Definition', 'newline')), ('ZEROORMORE', ('CONJUNCT', 'EmptyLine'))),
+    'Definition': ('CONJUNCT', 'Identifier', 'Whitespace', '"= "', 'Expression', '";"'),
+    'Expression': ('DISJUNCT', 'Disjunct', 'Except', 'Conjunct'),
+    'Conjunct': ('CONJUNCT', 'Item', ('ZEROORMORE', ('CONJUNCT', '" "', 'Item'))),
+    'Disjunct': ('CONJUNCT', 'Atom', ('ONEORMORE', ('CONJUNCT', 'newline', 'Whitespace', '"| "', 'Atom'))),
+    'Except': ('CONJUNCT', 'Atom', ('ONEORMORE', ('CONJUNCT', 'newline', 'Whitespace', '"- "', 'Atom'))),
+    'Item': ('DISJUNCT', 'Repetition', 'Atom'),
+    'Repetition': ('DISJUNCT', 'ZeroOrMore', 'ZeroOrOne', 'OneOrMore'),
+    'ZeroOrMore': ('CONJUNCT', '"( "', 'Conjunct', '" )*"'),
+    'ZeroOrOne': ('CONJUNCT', '"( "', 'Conjunct', '" )?"'),
+    'OneOrMore': ('CONJUNCT', '"( "', 'Conjunct', '" )+"'),
+    'Atom': ('DISJUNCT', 'Identifier', 'Reserved', 'Literal'),
+    'Identifier': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', 'upper', ('ZEROORMORE', ('CONJUNCT', 'lower'))))),
+    'Reserved': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', 'lower'))),
+    'Literal': ('DISJUNCT', 'DString', 'SString'),
+    'DString': ('CONJUNCT', '\'"\'', ('ZEROORMORE', ('CONJUNCT', 'NoDQuote')), '\'"\''),
+    'SString': ('CONJUNCT', '"\'"', ('ZEROORMORE', ('CONJUNCT', 'NoSQuote')), '"\'"'),
+    'NoDQuote': ('EXCEPT', 'print', '\'"\''),
+    'NoSQuote': ('EXCEPT', 'print', '"\'"'),
+    'Whitespace': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', 'blank'))),
+    'EmptyLine': ('CONJUNCT', ('ZEROORONE', ('CONJUNCT', '"#"', ('ZEROORMORE', ('CONJUNCT', 'print')))), 'newline'),
 }
 
 def create_parser_from_file(file):
@@ -106,14 +97,6 @@ class PEGParser:
         self.indent = 0
         self.trace = []
         self.max_position = 0
-        self.syntax_map = {
-            'AND'          : self.match_and,
-            'OR'           : self.match_or,
-            'NOT'          : self.match_not,
-            'ZERO-OR-ONE'  : self.match_zero_or_one,
-            'ZERO-OR-MORE' : self.match_zero_or_more,
-            'ONE-OR-MORE'  : self.match_one_or_more,
-        }
     def parse(self, string, term):
         ast, parsed = self.partial_parse(string, term)
         if ast and parsed == len(string):
@@ -134,8 +117,8 @@ class PEGParser:
         self.trace = list(reversed(self.trace[1:]))
         return ast, parsed
     def dispatch(self, string, term, position=0):
-        if isinstance(term, tuple) and term[0] in self.syntax_map:
-            return self.syntax_map[term[0]](string, term, position)
+        if isinstance(term, tuple) and hasattr(self, 'match_{}'.format(term[0].lower())):
+            return getattr(self, 'match_{}'.format(term[0].lower()))(string, term, position)
         elif isinstance(term, str):
             ast, pos = self.get_cached(term, position)
             if ast:
@@ -148,7 +131,7 @@ class PEGParser:
                 return self.match_literal(string, term, position)
         self.debug_print('unknown non-terminal: ' + term)
         return self.fail(term, position)
-    def match_zero_or_more(self, string, terms, position):
+    def match_zeroormore(self, string, terms, position):
         terms = terms[1]
         children = []
         last_pos = position
@@ -157,14 +140,14 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-        return ASTNode('ZERO-OR-MORE', children, string[position:last_pos]), last_pos
-    def match_zero_or_one(self, string, terms, position):
+        return ASTNode('ZEROORMORE', children, string[position:last_pos]), last_pos
+    def match_zeroorone(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
         if ast:
             return ast, pos
         return self.dispatch(string, 'empty', position)
-    def match_one_or_more(self, string, terms, position):
+    def match_oneormore(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
         if not ast:
@@ -176,14 +159,14 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-        return ASTNode('ONE-OR-MORE', children, string[position:last_pos]), last_pos
-    def match_and(self, string, terms, position):
+        return ASTNode('ONEORMORE', children, string[position:last_pos]), last_pos
+    def match_conjunct(self, string, terms, position):
         children = []
         pos = position
         for term in terms[1:]:
             child_ast, child_pos = self.dispatch(string, term, pos)
             if child_ast:
-                if isinstance(term, tuple) and (term[0] in ('ZERO-OR-ONE', 'ZERO-OR-MORE', 'ONE-OR-MORE')):
+                if isinstance(term, tuple) and (term[0] in ('ZEROORONE', 'ZEROORMORE', 'ONEORMORE')):
                     children.extend(child_ast.children)
                 else:
                     children.append(child_ast)
@@ -191,13 +174,13 @@ class PEGParser:
             else:
                 return ASTNode(), child_pos
         return ASTNode('AND', children, string[position:pos]), pos
-    def match_or(self, string, terms, position):
+    def match_disjunct(self, string, terms, position):
         for term in terms[1:]:
             ast, pos = self.dispatch(string, term, position)
             if ast:
                 return ast, pos
         return ASTNode(), position
-    def match_not(self, string, terms, position):
+    def match_except(self, string, terms, position):
         ast, pos = self.dispatch(string, terms[1], position)
         if not ast:
             return self.fail(terms[1], position)
@@ -217,7 +200,7 @@ class PEGParser:
             self.trace.append((position, term))
         if not ast:
             return self.fail(term, position)
-        if isinstance(expression, tuple) and expression[0] == 'OR':
+        if isinstance(expression, tuple) and expression[0] == 'DISJUNCT':
             ast = ASTNode(term, [ast], ast.match)
         else:
             ast.term = term
@@ -302,7 +285,7 @@ class EBNFWalker(ASTWalker):
     def __init__(self):
         super().__init__(PEGParser(EBNF_DEFS), 'Syntax')
     def flatten(self, ast, results):
-        return tuple((DESIGNATOR_MAPPING[ast.term], *results))
+        return tuple((ast.term.upper(), *results))
     def parse_Syntax(self, ast, results):
         return dict(results)
     def parse_Definition(self, ast, results):
