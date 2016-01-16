@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
 
 import re
+from os.path import dirname, join as join_path
 
 # TODO
 # have ASTNodes dynamically generate the match; saves memory from storing a string multiple times
 #   this can be done by storing the full string via variable capture in a function which takes substring start and end positions
+
+EBNF_GRAMMAR = join_path(dirname(__file__), 'ebnf.ebnf')
 
 EBNF_DEFS = {
     'Syntax': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', ('ZEROORMORE', ('CONJUNCT', 'EmptyLine')), 'Definition', 'newline')), ('ZEROORMORE', ('CONJUNCT', 'EmptyLine'))),
@@ -306,38 +309,28 @@ class EBNFWalker(ASTWalker):
         return ast.match
 
 def test():
-    from os.path import dirname, join as join_path
-    with open(join_path(dirname(__file__), 'ebnf.ebnf')) as fd:
+    with open(EBNF_GRAMMAR) as fd:
         text = fd.read()
     assert EBNFWalker().parse(text) == EBNF_DEFS
+    exit()
 
 def main():
     from argparse import ArgumentParser
     from fileinput import input as fileinput
     arg_parser = ArgumentParser()
     arg_parser.add_argument('-e', dest='expression', help='starting expression; if omitted, first defined term is used')
-    arg_parser.add_argument('-g', dest='grammar', help='EBNF grammar file')
+    arg_parser.add_argument('-g', dest='grammar', default=EBNF_GRAMMAR, help='EBNF grammar file')
     arg_parser.add_argument('-v', dest='verbose', default=False, action='store_true', help='show what the parser is doing')
     arg_parser.add_argument('file', default='-', nargs='?', help='text file to be parsed')
     args = arg_parser.parse_args()
-    if args.grammar:
-        grammar = ''
-        with open(args.grammar, 'r') as fd:
-            grammar = fd.read()
-        parser = create_parser(grammar)
-        if parser is None:
-            print('error: grammar file cannot be parsed')
-            exit(1)
-        if args.expression:
-            if args.expression not in parser.custom_defs:
-                print('error: specified expression not defined')
-                exit(1)
-            term = args.expression
-        else:
-            term = PEGParser(EBNF_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
+    grammar = ''
+    with open(args.grammar, 'r') as fd:
+        grammar = fd.read()
+    parser = create_parser(grammar)
+    if args.expression:
+        term = args.expression
     else:
-        parser = PEGParser(EBNF_DEFS)
-        term = 'Syntax'
+        term = PEGParser(EBNF_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
     parser.debug = args.verbose
     contents = ''.join(fileinput(files=args.file))
     parser.parse(contents, term).pretty_print()
