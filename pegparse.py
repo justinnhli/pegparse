@@ -275,8 +275,10 @@ class ASTWalker:
             return tuple(results), False
         else:
             return ASTWalker.EmptySentinel(), False
-    def parse(self, text):
-        ast = self.parser.parse(text, self.term)
+    def parse(self, text, term=None):
+        if term is None:
+            term = self.term
+        ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
     def parse_ast(self, ast):
         return self._postorder_traversal(ast)[0]
