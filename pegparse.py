@@ -2,6 +2,7 @@
 
 import re
 from os.path import dirname, join as join_path
+from textwrap import indent
 
 # TODO
 # have ASTNodes dynamically generate the match; saves memory from storing a string multiple times
@@ -73,10 +74,10 @@ class ASTNode:
             else:
                 cur_gen = tuple(child for child in next_gen if child.term == term)
         return cur_gen
-    def pretty_print(self, indent=0):
-        print('{}{}: {}'.format('    ' * indent, self.term, re.sub(r'\n', r'\\n', str(self.match))))
+    def pretty_print(self, indent_level=0):
+        print('{}{}: {}'.format(indent_level * 4 * ' ', self.term, re.sub(r'\n', r'\\n', str(self.match))))
         for child in self.children:
-            child.pretty_print(indent + 1)
+            child.pretty_print(indent_level + 1)
 
 class PEGParser:
     CORE_DEFS = {
@@ -104,7 +105,6 @@ class PEGParser:
         ast, parsed = self.partial_parse(string, term)
         if ast and parsed == len(string):
             return ast
-        from textwrap import indent
         trace = []
         for position, term in self.trace:
             trace.append('Failed to match {} at position {}'.format(term, position))
