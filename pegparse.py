@@ -42,6 +42,11 @@ def create_parser_from_file(file):
 def create_parser(bnf):
     return PEGParser(EBNFWalker().parse(bnf))
 
+def one_line_format(string):
+    string = re.sub(r'\n', r'\\n', string)
+    string = re.sub(r'\t', r'\\t', string)
+    return string
+
 class ASTNode:
     def __init__(self, term=None, children=None, match=None):
         self.term = term
@@ -75,7 +80,7 @@ class ASTNode:
                 cur_gen = tuple(child for child in next_gen if child.term == term)
         return cur_gen
     def pretty_print(self, indent_level=0):
-        print('{}{}: {}'.format(indent_level * 4 * ' ', self.term, re.sub(r'\n', r'\\n', str(self.match))))
+        print('{}{}: {}'.format(indent_level * 4 * ' ', self.term, one_line_format(self.match)))
         for child in self.children:
             child.pretty_print(indent_level + 1)
 
@@ -108,7 +113,7 @@ class PEGParser:
         trace = []
         for position, term in self.trace:
             trace.append('Failed to match {} at position {}'.format(term, position))
-            trace.append('  ' + re.sub(r'\n', r'\\n', string[position:position+32]))
+            trace.append('  ' + one_line_format(string[position:position+32]))
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
     def partial_parse(self, string, term):
@@ -194,7 +199,7 @@ class PEGParser:
         return ast, pos
     def match_custom(self, string, term, position):
         expression = self.custom_defs[term]
-        self.debug_print('parse called at position {} with {} >>>{}'.format(position, term, re.sub(r'\n', r'\\n', string[position:position+32])))
+        self.debug_print('parse called at position {} with {} >>>{}'.format(position, term, one_line_format(string[position:position+32])))
         max_position = self.max_position
         self.depth += 1
         ast = self.dispatch(string, expression, position)[0]
