@@ -43,8 +43,9 @@ def create_parser(bnf):
     return PEGParser(EBNFWalker().parse(bnf))
 
 def one_line_format(string):
-    string = re.sub(r'\n', r'\\n', string)
     string = re.sub(r'\t', r'\\t', string)
+    if '\n' in string:
+        string = string[:string.index('\n')]
     return string
 
 class ASTNode:
@@ -113,7 +114,7 @@ class PEGParser:
         trace = []
         for position, term in self.trace:
             trace.append('Failed to match {} at position {}'.format(term, position))
-            trace.append('  ' + one_line_format(string[position:position+32]))
+            trace.append('  ' + one_line_format(string[position:]))
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
     def partial_parse(self, string, term):
@@ -204,7 +205,7 @@ class PEGParser:
         self.depth += 1
         ast = self.dispatch(string, expression, position)[0]
         self.depth -= 1
-        if self.max_position > max_position and (not ast or len(self.trace) > 1):
+        if self.max_position >= max_position and (not ast or len(self.trace) > 1):
             self.trace.append((position, term))
         if not ast:
             return self.fail(term, position)
