@@ -138,6 +138,8 @@ class PEGParser:
                 return self.match_core(string, term, position)
             elif re.match(r"^'[^']*'$", term) or re.match(r'^"[^"]*"$', term):
                 return self.match_literal(string, term, position)
+            else:
+                raise NameError('Unknown terminal {}'.format(term))
         self.debug_print('unknown non-terminal: {}'.format(term))
         return self.fail(term, position)
     def match_zeroormore(self, string, terms, position):
