@@ -49,12 +49,28 @@ def one_line_format(string):
     return string
 
 class ASTNode:
-    def __init__(self, term=None, children=None, match=None):
+    def __init__(self, term=None, children=None, string=None, start_pos=None, end_pos=None):
         self.term = term
         self.children = children
-        self.match = match
+        self.string = string
+        self.start_pos = start_pos
+        self.end_pos = end_pos
     def __bool__(self):
         return self.term is not None
+    @property
+    def match(self):
+        return self.string[self.start_pos:self.end_pos]
+    @property
+    def line_num(self):
+        return self.string.count('\n', 0, self.start_pos) + 1
+    @property
+    def column(self):
+        prev_newline = self.string.rfind('\n', 0, self.start_pos)
+        if prev_newline == -1:
+            column = 0
+        else:
+            column = self.start_pos - prev_newline
+        return column
     def first_descendant(self, descentry=None):
         descentry = ('*' if descentry is None else descentry).split('/')
         result = self
@@ -154,7 +170,7 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-        return ASTNode('ZEROORMORE', children, string[position:last_pos]), last_pos
+        return ASTNode('ZEROORMORE', children, string, position, last_pos), last_pos
     def match_zeroorone(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
@@ -173,7 +189,7 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
-        return ASTNode('ONEORMORE', children, string[position:last_pos]), last_pos
+        return ASTNode('ONEORMORE', children, string, position, last_pos), last_pos
     def match_conjunct(self, string, terms, position):
         children = []
         pos = position
@@ -187,7 +203,7 @@ class PEGParser:
                 pos = child_pos
             else:
                 return ASTNode(), child_pos
-        return ASTNode('AND', children, string[position:pos]), pos
+        return ASTNode('AND', children, string, position, pos), pos
     def match_disjunct(self, string, terms, position):
         for term in terms[1:]:
             ast, pos = self.dispatch(string, term, position)
@@ -215,19 +231,19 @@ class PEGParser:
         if not ast:
             return self.fail(term, position)
         if isinstance(expression, tuple) and expression[0] == 'DISJUNCT':
-            ast = ASTNode(term, [ast], ast.match)
+            ast = ASTNode(term, [ast], string, position, position + len(ast.match))
         else:
             ast.term = term
         return self.cache_and_return(term, position, ast)
     def match_core(self, string, term, position):
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
-            ast = ASTNode(term, [], match.group(0))
+            ast = ASTNode(term, [], string, position, position + len(match.group(0)))
             return self.cache_and_return(term, position, ast)
         return self.fail(term, position)
     def match_literal(self, string, term, position):
         if string[position:].find(term[1:-1]) == 0:
-            ast = ASTNode(term, [], term[1:-1])
+            ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
             return self.cache_and_return(term, position, ast)
         return self.fail(term, position)
     def fail(self, term, position):
