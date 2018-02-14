@@ -117,6 +117,9 @@ class PEGParser:
             trace.append('  ' + one_line_format(string[position:]))
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
+    def parse_file(self, filepath, term):
+        with open(filepath) as fd:
+            return self.parse(fd.read(), term)
     def partial_parse(self, string, term):
         self.cache = {}
         self.depth = 0
@@ -288,6 +291,9 @@ class ASTWalker:
             term = self.term
         ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
+    def parse_file(self, filepath, term=None):
+        with open(filepath) as fd:
+            return self.parse(fd.read(), term)
     def parse_ast(self, ast):
         return self._postorder_traversal(ast)[0]
     @staticmethod
