@@ -4,10 +4,6 @@ import re
 from os.path import dirname, join as join_path
 from textwrap import indent
 
-# TODO
-# have ASTNodes dynamically generate the match; saves memory from storing a string multiple times
-#   this can be done by storing the full string via variable capture in a function which takes substring start and end positions
-
 EBNF_GRAMMAR = join_path(dirname(__file__), 'ebnf.ebnf')
 
 EBNF_DEFS = {
