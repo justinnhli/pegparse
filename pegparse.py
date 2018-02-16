@@ -66,7 +66,7 @@ class ASTNode:
             column = 0
         else:
             column = self.start_pos - prev_newline
-        return column
+        return column + 1
     def first_descendant(self, descentry=None):
         descentry = ('*' if descentry is None else descentry).split('/')
         result = self
