@@ -30,13 +30,16 @@ EBNF_DEFS = {
     'EmptyLine': ('CONJUNCT', ('ZEROORONE', ('CONJUNCT', '"#"', ('ZEROORMORE', ('CONJUNCT', 'print')))), 'newline'),
 }
 
+
 def create_parser_from_file(file):
     with open(file) as fd:
         ebnf = fd.read()
     return create_parser(ebnf)
 
+
 def create_parser(bnf):
     return PEGParser(EBNFWalker().parse(bnf))
+
 
 def one_line_format(string):
     string = re.sub(r'\t', r'\\t', string)
@@ -44,21 +47,27 @@ def one_line_format(string):
         string = string[:string.index('\n')]
     return string
 
+
 class ASTNode:
+
     def __init__(self, term=None, children=None, string=None, start_pos=None, end_pos=None):
         self.term = term
         self.children = children
         self.string = string
         self.start_pos = start_pos
         self.end_pos = end_pos
+
     def __bool__(self):
         return self.term is not None
+
     @property
     def match(self):
         return self.string[self.start_pos:self.end_pos]
+
     @property
     def line_num(self):
         return self.string.count('\n', 0, self.start_pos) + 1
+
     @property
     def column(self):
         prev_newline = self.string.rfind('\n', 0, self.start_pos)
@@ -67,6 +76,7 @@ class ASTNode:
         else:
             column = self.start_pos - prev_newline
         return column + 1
+
     def first_descendant(self, descentry=None):
         descentry = ('*' if descentry is None else descentry).split('/')
         result = self
@@ -80,9 +90,10 @@ class ASTNode:
                 else:
                     return ()
         return result
+
     def descendants(self, descentry=None):
         descentry = ('*' if descentry is None else descentry).split('/')
-        cur_gen = (self,)
+        cur_gen = (self, )
         for term in descentry:
             next_gen = []
             for adult in cur_gen:
@@ -92,10 +103,12 @@ class ASTNode:
             else:
                 cur_gen = tuple(child for child in next_gen if child.term == term)
         return cur_gen
+
     def pretty_print(self, indent_level=0):
         print('{}{}: {}'.format(indent_level * 4 * ' ', self.term, one_line_format(self.match)))
         for child in self.children:
             child.pretty_print(indent_level + 1)
+
 
 class PEGParser:
     CORE_DEFS = {
@@ -112,6 +125,7 @@ class PEGParser:
         'newline': r'\n',
         'tab': r'\t',
     }
+
     def __init__(self, syntax):
         self.custom_defs = syntax
         self.debug = False
@@ -119,6 +133,7 @@ class PEGParser:
         self.depth = 0
         self.trace = []
         self.max_position = 0
+
     def parse(self, string, term):
         ast, parsed = self.partial_parse(string, term)
         if ast and parsed == len(string):
@@ -129,9 +144,11 @@ class PEGParser:
             trace.append('  ' + one_line_format(string[position:]))
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
+
     def parse_file(self, filepath, term):
         with open(filepath) as fd:
             return self.parse(fd.read(), term)
+
     def partial_parse(self, string, term):
         self.cache = {}
         self.depth = 0
@@ -140,6 +157,7 @@ class PEGParser:
         ast, parsed = self.dispatch(string, term, 0)
         self.trace = list(reversed(self.trace[1:]))
         return ast, parsed
+
     def dispatch(self, string, term, position=0):
         if isinstance(term, tuple) and hasattr(self, 'match_{}'.format(term[0].lower())):
             return getattr(self, 'match_{}'.format(term[0].lower()))(string, term, position)
@@ -157,6 +175,7 @@ class PEGParser:
                 raise NameError('Unknown terminal {}'.format(term))
         self.debug_print('unknown non-terminal: {}'.format(term))
         return self.fail(term, position)
+
     def match_zeroormore(self, string, terms, position):
         terms = terms[1]
         children = []
@@ -167,12 +186,14 @@ class PEGParser:
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
         return ASTNode('ZEROORMORE', children, string, position, last_pos), last_pos
+
     def match_zeroorone(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
         if ast:
             return ast, pos
         return self.dispatch(string, 'empty', position)
+
     def match_oneormore(self, string, terms, position):
         terms = terms[1]
         ast, pos = self.dispatch(string, terms, position)
@@ -186,6 +207,7 @@ class PEGParser:
             last_pos = pos
             ast, pos = self.dispatch(string, terms, pos)
         return ASTNode('ONEORMORE', children, string, position, last_pos), last_pos
+
     def match_conjunct(self, string, terms, position):
         children = []
         pos = position
@@ -200,12 +222,14 @@ class PEGParser:
             else:
                 return ASTNode(), child_pos
         return ASTNode('AND', children, string, position, pos), pos
+
     def match_disjunct(self, string, terms, position):
         for term in terms[1:]:
             ast, pos = self.dispatch(string, term, position)
             if ast:
                 return ast, pos
         return ASTNode(), position
+
     def match_except(self, string, terms, position):
         ast, pos = self.dispatch(string, terms[1], position)
         if not ast:
@@ -215,9 +239,12 @@ class PEGParser:
             if nast and ast.match == nast.match:
                 return self.fail(term, position)
         return ast, pos
+
     def match_custom(self, string, term, position):
         expression = self.custom_defs[term]
-        self.debug_print('parse called at position {} with {} >>>{}'.format(position, term, one_line_format(string[position:position+32])))
+        self.debug_print('parse called at position {} with {} >>>{}'.format(
+            position, term, one_line_format(string[position:position+32])
+        ))
         max_position = self.max_position
         self.depth += 1
         ast = self.dispatch(string, expression, position)[0]
@@ -231,24 +258,29 @@ class PEGParser:
         else:
             ast.term = term
         return self.cache_and_return(term, position, ast)
+
     def match_core(self, string, term, position):
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
             ast = ASTNode(term, [], string, position, position + len(match.group(0)))
             return self.cache_and_return(term, position, ast)
         return self.fail(term, position)
+
     def match_literal(self, string, term, position):
         if string[position:].find(term[1:-1]) == 0:
             ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
             return self.cache_and_return(term, position, ast)
         return self.fail(term, position)
+
     def fail(self, term, position):
         if term in self.custom_defs:
             self.debug_print('failed to match {} at position {}'.format(term, position))
         return ASTNode(), position
+
     def cache_and_return(self, term, position, ast):
         self.cache[(term, position)] = ast
         return self.get_cached(term, position)
+
     def get_cached(self, term, position):
         if (term, position) in self.cache:
             if term in self.custom_defs:
@@ -257,16 +289,20 @@ class PEGParser:
             new_position = position + len(ast.match)
             if new_position > self.max_position:
                 self.max_position = new_position
-                self.trace = [(position, term),]
+                self.trace = [(position, term), ]
             return ast, new_position
         return ASTNode(), position
+
     def debug_print(self, obj):
         if self.debug:
             print('    ' * self.depth + str(obj))
 
+
 class ASTWalker:
+
     class EmptySentinel:
         pass
+
     def __init__(self, parser, term):
         self.parser = parser
         self.term = term
@@ -280,12 +316,13 @@ class ASTWalker:
                 if ASTWalker.term_in_definition(noskip, definition):
                     noskips.append(term)
                     self._terms_to_expand.add(term)
+
     def _postorder_traversal(self, ast, depth=0):
         results = []
         for child in ast.descendants('*'):
             if child.term not in self._terms_to_expand:
                 continue
-            result, parsed = self._postorder_traversal(child, depth=depth+1)
+            result, parsed = self._postorder_traversal(child, depth=depth + 1)
             if not isinstance(result, ASTWalker.EmptySentinel):
                 if parsed:
                     results.append(result)
@@ -298,49 +335,66 @@ class ASTWalker:
             return tuple(results), False
         else:
             return ASTWalker.EmptySentinel(), False
+
     def parse(self, text, term=None):
         if term is None:
             term = self.term
         ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
+
     def parse_file(self, filepath, term=None):
         with open(filepath) as fd:
             return self.parse(fd.read(), term)
+
     def parse_ast(self, ast):
         return self._postorder_traversal(ast)[0]
+
     @staticmethod
     def term_in_definition(term, definition):
         return any((term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element))) for element in definition)
 
 class EBNFWalker(ASTWalker):
+
     def __init__(self):
         super().__init__(PEGParser(EBNF_DEFS), 'Syntax')
+
     def flatten(self, ast, results):
         return tuple((ast.term.upper(), *results))
+
     def parse_Syntax(self, ast, results):
         return dict(results)
+
     def parse_Definition(self, ast, results):
         return tuple(results)
+
     def parse_Disjunct(self, ast, results):
         return self.flatten(ast, results)
+
     def parse_Except(self, ast, results):
         return self.flatten(ast, results)
+
     def parse_Conjunct(self, ast, results):
         return self.flatten(ast, results)
+
     def parse_Repetition(self, ast, results):
         return self.flatten(ast.first_descendant('*'), results)
+
     def parse_Reserved(self, ast, results):
         return ast.match
+
     def parse_Identifier(self, ast, results):
         return ast.match
+
     def parse_Literal(self, ast, results):
         return ast.match
+
 
 def test():
     with open(EBNF_GRAMMAR) as fd:
         text = fd.read()
     assert EBNFWalker().parse(text) == EBNF_DEFS
     exit()
+
 
 def main():
     from argparse import ArgumentParser
@@ -362,6 +416,7 @@ def main():
     parser.debug = args.verbose
     contents = ''.join(fileinput(files=args.file))
     parser.parse(contents, term).pretty_print()
+
 
 if __name__ == '__main__':
     main()
