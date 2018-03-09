@@ -389,25 +389,15 @@ class EBNFWalker(ASTWalker):
         return ast.match
 
 
-def run_tests():
-    with open(EBNF_GRAMMAR) as fd:
-        text = fd.read()
-    assert EBNFWalker().parse(text) == EBNF_DEFS
-
-
 def main():
     from argparse import ArgumentParser
     from fileinput import input as fileinput
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('--run-tests', dest='test', action='store_true', help='run test cases; ignores all other arguments')
     arg_parser.add_argument('-e', dest='expression', help='starting expression; if omitted, first defined term is used')
     arg_parser.add_argument('-g', dest='grammar', default=EBNF_GRAMMAR, help='EBNF grammar file')
     arg_parser.add_argument('-v', dest='verbose', action='store_true', help='show what the parser is doing')
     arg_parser.add_argument('file', default='-', nargs='?', help='text file to be parsed')
     args = arg_parser.parse_args()
-    if args.test:
-        run_tests()
-        exit()
     grammar = ''
     with open(args.grammar, 'r') as fd:
         grammar = fd.read()
