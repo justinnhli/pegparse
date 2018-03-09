@@ -135,7 +135,7 @@ class PEGParser:
         self.max_position = 0
 
     def parse(self, string, term):
-        ast, parsed = self.partial_parse(string, term)
+        ast, parsed = self._partial_parse(string, term)
         if ast and parsed == len(string):
             return ast
         trace = []
@@ -149,70 +149,70 @@ class PEGParser:
         with open(filepath) as fd:
             return self.parse(fd.read(), term)
 
-    def partial_parse(self, string, term):
+    def _partial_parse(self, string, term):
         self.cache = {}
         self.depth = 0
         self.trace = []
         self.max_position = 0
-        ast, parsed = self.dispatch(string, term, 0)
+        ast, parsed = self._dispatch(string, term, 0)
         self.trace = list(reversed(self.trace[1:]))
         return ast, parsed
 
-    def dispatch(self, string, term, position=0):
-        if isinstance(term, tuple) and hasattr(self, 'match_{}'.format(term[0].lower())):
-            return getattr(self, 'match_{}'.format(term[0].lower()))(string, term, position)
+    def _dispatch(self, string, term, position=0):
+        if isinstance(term, tuple) and hasattr(self, '_match_{}'.format(term[0].lower())):
+            return getattr(self, '_match_{}'.format(term[0].lower()))(string, term, position)
         elif isinstance(term, str):
-            ast, pos = self.get_cached(term, position)
+            ast, pos = self._get_cached(term, position)
             if ast:
                 return ast, pos
             elif term in self.custom_defs:
-                return self.match_custom(string, term, position)
+                return self._match_custom(string, term, position)
             elif term in PEGParser.CORE_DEFS:
-                return self.match_core(string, term, position)
+                return self._match_core(string, term, position)
             elif re.match(r"^'[^']*'$", term) or re.match(r'^"[^"]*"$', term):
-                return self.match_literal(string, term, position)
+                return self._match_literal(string, term, position)
             else:
                 raise NameError('Unknown terminal {}'.format(term))
-        self.debug_print('unknown non-terminal: {}'.format(term))
-        return self.fail(term, position)
+        self._debug_print('unknown non-terminal: {}'.format(term))
+        return self._fail(term, position)
 
-    def match_zeroormore(self, string, terms, position):
+    def _match_zeroormore(self, string, terms, position):
         terms = terms[1]
         children = []
         last_pos = position
-        ast, pos = self.dispatch(string, terms, position)
+        ast, pos = self._dispatch(string, terms, position)
         while ast:
             children.extend(ast.children)
             last_pos = pos
-            ast, pos = self.dispatch(string, terms, pos)
+            ast, pos = self._dispatch(string, terms, pos)
         return ASTNode('ZEROORMORE', children, string, position, last_pos), last_pos
 
-    def match_zeroorone(self, string, terms, position):
+    def _match_zeroorone(self, string, terms, position):
         terms = terms[1]
-        ast, pos = self.dispatch(string, terms, position)
+        ast, pos = self._dispatch(string, terms, position)
         if ast:
             return ast, pos
-        return self.dispatch(string, 'empty', position)
+        return self._dispatch(string, 'empty', position)
 
-    def match_oneormore(self, string, terms, position):
+    def _match_oneormore(self, string, terms, position):
         terms = terms[1]
-        ast, pos = self.dispatch(string, terms, position)
+        ast, pos = self._dispatch(string, terms, position)
         if not ast:
             return ast, pos
         children = ast.children
         last_pos = pos
-        ast, pos = self.dispatch(string, terms, pos)
+        ast, pos = self._dispatch(string, terms, pos)
         while ast:
             children.extend(ast.children)
             last_pos = pos
-            ast, pos = self.dispatch(string, terms, pos)
+            ast, pos = self._dispatch(string, terms, pos)
         return ASTNode('ONEORMORE', children, string, position, last_pos), last_pos
 
-    def match_conjunct(self, string, terms, position):
+    def _match_conjunct(self, string, terms, position):
         children = []
         pos = position
         for term in terms[1:]:
-            child_ast, child_pos = self.dispatch(string, term, pos)
+            child_ast, child_pos = self._dispatch(string, term, pos)
             if child_ast:
                 if isinstance(term, tuple) and (term[0] in ('ZEROORONE', 'ZEROORMORE', 'ONEORMORE')):
                     children.extend(child_ast.children)
@@ -223,68 +223,68 @@ class PEGParser:
                 return ASTNode(), child_pos
         return ASTNode('AND', children, string, position, pos), pos
 
-    def match_disjunct(self, string, terms, position):
+    def _match_disjunct(self, string, terms, position):
         for term in terms[1:]:
-            ast, pos = self.dispatch(string, term, position)
+            ast, pos = self._dispatch(string, term, position)
             if ast:
                 return ast, pos
         return ASTNode(), position
 
-    def match_except(self, string, terms, position):
-        ast, pos = self.dispatch(string, terms[1], position)
+    def _match_except(self, string, terms, position):
+        ast, pos = self._dispatch(string, terms[1], position)
         if not ast:
-            return self.fail(terms[1], position)
+            return self._fail(terms[1], position)
         for term in terms[2:]:
-            nast = self.dispatch(string, term, position)[0]
+            nast = self._dispatch(string, term, position)[0]
             if nast and ast.match == nast.match:
-                return self.fail(term, position)
+                return self._fail(term, position)
         return ast, pos
 
-    def match_custom(self, string, term, position):
+    def _match_custom(self, string, term, position):
         expression = self.custom_defs[term]
-        self.debug_print('parse called at position {} with {} >>>{}'.format(
+        self._debug_print('parse called at position {} with {} >>>{}'.format(
             position, term, one_line_format(string[position:position+32])
         ))
         max_position = self.max_position
         self.depth += 1
-        ast = self.dispatch(string, expression, position)[0]
+        ast = self._dispatch(string, expression, position)[0]
         self.depth -= 1
         if self.max_position >= max_position and (not ast or len(self.trace) > 1):
             self.trace.append((position, term))
         if not ast:
-            return self.fail(term, position)
+            return self._fail(term, position)
         if isinstance(expression, tuple) and expression[0] == 'DISJUNCT':
             ast = ASTNode(term, [ast], string, position, position + len(ast.match))
         else:
             ast.term = term
-        return self.cache_and_return(term, position, ast)
+        return self._cache_and_return(term, position, ast)
 
-    def match_core(self, string, term, position):
+    def _match_core(self, string, term, position):
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
             ast = ASTNode(term, [], string, position, position + len(match.group(0)))
-            return self.cache_and_return(term, position, ast)
-        return self.fail(term, position)
+            return self._cache_and_return(term, position, ast)
+        return self._fail(term, position)
 
-    def match_literal(self, string, term, position):
+    def _match_literal(self, string, term, position):
         if string[position:].find(term[1:-1]) == 0:
             ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
-            return self.cache_and_return(term, position, ast)
-        return self.fail(term, position)
+            return self._cache_and_return(term, position, ast)
+        return self._fail(term, position)
 
-    def fail(self, term, position):
+    def _fail(self, term, position):
         if term in self.custom_defs:
-            self.debug_print('failed to match {} at position {}'.format(term, position))
+            self._debug_print('failed to match {} at position {}'.format(term, position))
         return ASTNode(), position
 
-    def cache_and_return(self, term, position, ast):
+    def _cache_and_return(self, term, position, ast):
         self.cache[(term, position)] = ast
-        return self.get_cached(term, position)
+        return self._get_cached(term, position)
 
-    def get_cached(self, term, position):
+    def _get_cached(self, term, position):
         if (term, position) in self.cache:
             if term in self.custom_defs:
-                self.debug_print('matched {} at position {}'.format(term, position))
+                self._debug_print('matched {} at position {}'.format(term, position))
             ast = self.cache[(term, position)]
             new_position = position + len(ast.match)
             if new_position > self.max_position:
@@ -293,7 +293,7 @@ class PEGParser:
             return ast, new_position
         return ASTNode(), position
 
-    def debug_print(self, obj):
+    def _debug_print(self, obj):
         if self.debug:
             print('    ' * self.depth + str(obj))
 
