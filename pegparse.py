@@ -32,16 +32,40 @@ EBNF_DEFS = {
 
 
 def create_parser_from_file(filepath, debug=False):
+    """Create parser from a EBNF grammar file.
+
+    Arguments:
+        filepath (str): Path to EBNF file.
+
+    Returns:
+        PEGParser: A parser for the grammar.
+    """
     with open(filepath) as fd:
         ebnf = fd.read()
     return create_parser(ebnf, debug=debug)
 
 
 def create_parser(ebnf, debug=False):
+    """Create parser from a EBNF grammar.
+
+    Arguments:
+        ebnf (str): A EBNF grammar.
+
+    Returns:
+        PEGParser: A parser for the grammar.
+    """
     return PEGParser(EBNFWalker().parse(ebnf), debug=debug)
 
 
 def one_line_format(string):
+    """Escape tabs and spaces in a string.
+
+    Arguments:
+        string (str): The string to escape.
+
+    Returns:
+        str: The escaped string.
+    """
     string = re.sub(r'\t', r'\\t', string)
     if '\n' in string:
         string = string[:string.index('\n')]
@@ -49,8 +73,22 @@ def one_line_format(string):
 
 
 class ASTNode:
+    """Abstract Syntax Tree (AST) node."""
 
     def __init__(self, term, children, string, start_pos, end_pos):
+        """Initialize the ASTNode.
+
+        The string, start_pos, and end_pos arguments matches the arguments to
+        range(), ie. the substring
+            string[start_pos:end_pos]
+
+        Arguments:
+            term (str): The term this node matches.
+            children ([ASTNode]): Children nodes of this term in the grammar.
+            string (str): The complete string being parsed.
+            start_pos (int): Index of the first character matched by this node.
+            end_pos (int): Index of the last character matched by this node.
+        """
         self.term = term
         self.children = children
         self.string = string
@@ -59,14 +97,17 @@ class ASTNode:
 
     @property
     def match(self):
+        """Return the substring matched by this node."""
         return self.string[self.start_pos:self.end_pos]
 
     @property
     def line_num(self):
+        """Return the starting line number of the substring matched by this node."""
         return self.string.count('\n', 0, self.start_pos) + 1
 
     @property
     def column(self):
+        """Return the starting column of the substring matched by this node."""
         prev_newline = self.string.rfind('\n', 0, self.start_pos)
         if prev_newline == -1:
             column = 0
@@ -75,6 +116,17 @@ class ASTNode:
         return column + 1
 
     def first_descendant(self, path=None):
+        """Get the first ASTNode descendant that matches the path.
+
+        See the docstring for descendants() for a description of the path
+        argument.
+
+        Arguments:
+            path (str): The path to the desired descendant.
+
+        Returns:
+            ASTNode: The node representing the descendant.
+        """
         path = ('*' if path is None else path).split('/')
         result = self
         for term in path:
@@ -92,6 +144,38 @@ class ASTNode:
         return result
 
     def descendants(self, path=None):
+        """Get all ASTNode descendants that match the path.
+
+        The path describes the term of each descendant separated by a '/'.
+        Where the term is irrelevant, it can either be represented by '*' or
+        left empty. For example, given the following grammar:
+
+            Expression = Operand ( Operator Operand )*;
+            Operand = ParenExpression
+                    | Number;
+            ParenExpression = "(" Expression ")";
+            Operator = "+"
+                     | "-"
+                     | "*"
+                     | "/";
+            Number = ( digit )+;
+
+        And an ASTNode representing the following Expression:
+
+            (1+(2*3))-5
+
+        The call `.descendants('Operand/ParenExpression/Expression/Operand')`
+        would return the Operand ASTNodes with for '1' and '(2*3)'. Both of the
+        paths 'Operand' and 'Operand/*' would give the ASTNodes for '(1+(2*3))'
+        and '5', but while the first path would return two Operand ASTNodes,
+        the second path would return a ParenExpression and a Number ASTNode.
+
+        Arguments:
+            path (str): The path to the desired descendant.
+
+        Returns:
+            [ASTNode]: All descendant ASTNodes that match the path.
+        """
         path = ('*' if path is None else path).split('/')
         cur_gen = (self, )
         for term in path:
@@ -105,6 +189,7 @@ class ASTNode:
         return cur_gen
 
     def pretty_print(self, indent_level=0):
+        """Print the ASTNode using indentation to denote ancestry."""
         print('{}{}: {}'.format(indent_level * 4 * ' ', self.term, one_line_format(self.match)))
         for child in self.children:
             child.pretty_print(indent_level + 1)
