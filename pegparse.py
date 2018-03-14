@@ -31,14 +31,14 @@ EBNF_DEFS = {
 }
 
 
-def create_parser_from_file(file):
-    with open(file) as fd:
+def create_parser_from_file(filepath):
+    with open(filepath) as fd:
         ebnf = fd.read()
     return create_parser(ebnf)
 
 
-def create_parser(bnf):
-    return PEGParser(EBNFWalker().parse(bnf))
+def create_parser(ebnf):
+    return PEGParser(EBNFWalker().parse(ebnf))
 
 
 def one_line_format(string):
@@ -77,10 +77,10 @@ class ASTNode:
             column = self.start_pos - prev_newline
         return column + 1
 
-    def first_descendant(self, descentry=None):
-        descentry = ('*' if descentry is None else descentry).split('/')
+    def first_descendant(self, path=None):
+        path = ('*' if path is None else path).split('/')
         result = self
-        for term in descentry:
+        for term in path:
             if term == '*':
                 result = result.children[0]
             else:
@@ -91,10 +91,10 @@ class ASTNode:
                     return ()
         return result
 
-    def descendants(self, descentry=None):
-        descentry = ('*' if descentry is None else descentry).split('/')
+    def descendants(self, path=None):
+        path = ('*' if path is None else path).split('/')
         cur_gen = (self, )
-        for term in descentry:
+        for term in path:
             next_gen = []
             for adult in cur_gen:
                 next_gen.extend(adult.children)
