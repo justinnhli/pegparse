@@ -50,15 +50,12 @@ def one_line_format(string):
 
 class ASTNode:
 
-    def __init__(self, term=None, children=None, string=None, start_pos=None, end_pos=None):
+    def __init__(self, term, children, string, start_pos, end_pos):
         self.term = term
         self.children = children
         self.string = string
         self.start_pos = start_pos
         self.end_pos = end_pos
-
-    def __bool__(self):
-        return self.term is not None
 
     @property
     def match(self):
@@ -220,7 +217,7 @@ class PEGParser:
                     children.append(child_ast)
                 pos = child_pos
             else:
-                return ASTNode(), child_pos
+                return None, child_pos
         return ASTNode('AND', children, string, position, pos), pos
 
     def _match_disjunct(self, string, terms, position):
@@ -228,7 +225,7 @@ class PEGParser:
             ast, pos = self._dispatch(string, term, position)
             if ast:
                 return ast, pos
-        return ASTNode(), position
+        return None, position
 
     def _match_except(self, string, terms, position):
         ast, pos = self._dispatch(string, terms[1], position)
@@ -275,7 +272,7 @@ class PEGParser:
     def _fail(self, term, position):
         if term in self.custom_defs:
             self._debug_print('failed to match {} at position {}'.format(term, position))
-        return ASTNode(), position
+        return None, position
 
     def _cache_and_return(self, term, position, ast):
         self.cache[(term, position)] = ast
@@ -291,7 +288,7 @@ class PEGParser:
                 self.max_position = new_position
                 self.trace = [(position, term), ]
             return ast, new_position
-        return ASTNode(), position
+        return None, position
 
     def _debug_print(self, obj):
         if self.debug:
