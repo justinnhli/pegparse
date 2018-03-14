@@ -81,7 +81,10 @@ class ASTNode:
             if term == '*':
                 result = result.children[0]
             else:
-                children = tuple(child for child in result.children if child.term == term)
+                children = tuple(
+                    child for child in result.children
+                    if child.term == term
+                )
                 if children:
                     result = children[0]
                 else:
@@ -348,7 +351,10 @@ class ASTWalker:
 
     @staticmethod
     def term_in_definition(term, definition):
-        return any((term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element))) for element in definition)
+        return any(
+            (term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element)))
+            for element in definition
+        )
 
 class EBNFWalker(ASTWalker):
 
