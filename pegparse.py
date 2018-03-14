@@ -126,9 +126,9 @@ class PEGParser:
         'tab': r'\t',
     }
 
-    def __init__(self, syntax):
+    def __init__(self, syntax, debug=False):
         self.custom_defs = syntax
-        self.debug = False
+        self.debug = debug
         self.cache = {}
         self.depth = 0
         self.trace = []
@@ -404,12 +404,11 @@ def main():
     grammar = ''
     with open(args.grammar, 'r') as fd:
         grammar = fd.read()
-    parser = create_parser(grammar)
+    parser = create_parser(grammar, debug=args.verbose)
     if args.expression:
         term = args.expression
     else:
         term = PEGParser(EBNF_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
-    parser.debug = args.verbose
     contents = ''.join(fileinput(files=args.file))
     parser.parse(contents, term).pretty_print()
 
