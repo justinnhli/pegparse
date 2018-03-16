@@ -31,14 +31,14 @@ EBNF_DEFS = {
 }
 
 
-def create_parser_from_file(filepath):
+def create_parser_from_file(filepath, debug=False):
     with open(filepath) as fd:
         ebnf = fd.read()
-    return create_parser(ebnf)
+    return create_parser(ebnf, debug=debug)
 
 
-def create_parser(ebnf):
-    return PEGParser(EBNFWalker().parse(ebnf))
+def create_parser(ebnf, debug=False):
+    return PEGParser(EBNFWalker().parse(ebnf), debug=debug)
 
 
 def one_line_format(string):
@@ -138,6 +138,10 @@ class PEGParser:
         ast, parsed = self._partial_parse(string, term)
         if ast and parsed == len(string):
             return ast
+        else:
+            return self._fail_parse(string, parsed)
+
+    def _fail_parse(self, string, parsed):
         trace = []
         for position, term in self.trace:
             trace.append('Failed to match {} at position {}'.format(term, position))
@@ -303,9 +307,9 @@ class ASTWalker:
     class EmptySentinel:
         pass
 
-    def __init__(self, parser, term):
+    def __init__(self, parser, root_term):
         self.parser = parser
-        self.term = term
+        self.root_term = root_term
         self._terms_to_expand = set(term[6:] for term in dir(self) if term.startswith('parse_'))
         noskips = list(self._terms_to_expand)
         while noskips:
@@ -338,7 +342,7 @@ class ASTWalker:
 
     def parse(self, text, term=None):
         if term is None:
-            term = self.term
+            term = self.root_term
         ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
 
@@ -355,6 +359,7 @@ class ASTWalker:
             (term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element)))
             for element in definition
         )
+
 
 class EBNFWalker(ASTWalker):
 
