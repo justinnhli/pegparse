@@ -196,6 +196,12 @@ class ASTNode:
 
 
 class PEGParser:
+    """Parser for Parsing Expression Grammars (PEGs).
+
+    A fairly standard packrat parser. The core definitions are stored as
+    constants, while the custom definitions are provided to the constructor.
+    """
+
     CORE_DEFS = {
         'empty': r'',
         'blank': r'[ \t]',
@@ -212,6 +218,14 @@ class PEGParser:
     }
 
     def __init__(self, syntax, debug=False):
+        """Initialize the Parser.
+
+        Arguments:
+            syntax ({}): Dictionary of term definitions. This is usually
+                produced by an EBNFWalker instance.
+            debug (bool): Whether to print parsing information.
+                Defaults to False.
+        """
         self.custom_defs = syntax
         self.debug = debug
         self.cache = {}
@@ -219,14 +233,51 @@ class PEGParser:
         self.trace = []
         self.max_position = 0
 
+    def parse_file(self, filepath, term):
+        """Parse the contents of a file as a given term.
+
+        Arguments:
+            string (str): The path to the file.
+            term (str): The term to parse the string as.
+
+        Returns:
+            ASTNode: The root node of the AST.
+        """
+        with open(filepath) as fd:
+            return self.parse(fd.read(), term)
+
     def parse(self, string, term):
-        ast, parsed = self._partial_parse(string, term)
+        """Parse a string as a given term.
+
+        Arguments:
+            string (str): The string to parse.
+            term (str): The term to parse the string as.
+
+        Returns:
+            ASTNode: The root node of the AST.
+        """
+        self.cache = {}
+        self.depth = 0
+        self.trace = []
+        self.max_position = 0
+        ast, parsed = self._dispatch(string, term, 0)
+        self.trace = list(reversed(self.trace[1:]))
         if ast and parsed == len(string):
             return ast
         else:
             return self._fail_parse(string, parsed)
 
     def _fail_parse(self, string, parsed):
+        """Fail a parse by printing a trace and raising SyntaxError.
+
+        Arguments:
+            string (str): The string to parse.
+            parsed (int): The number of characters successfully parsed.
+
+        Raises:
+            SyntaxError: If the term is not defined, or if no parse was found
+                before the end of the string.
+        """
         trace = []
         for position, term in self.trace:
             trace.append('Failed to match {} at position {}'.format(term, position))
@@ -234,20 +285,19 @@ class PEGParser:
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
 
-    def parse_file(self, filepath, term):
-        with open(filepath) as fd:
-            return self.parse(fd.read(), term)
-
-    def _partial_parse(self, string, term):
-        self.cache = {}
-        self.depth = 0
-        self.trace = []
-        self.max_position = 0
-        ast, parsed = self._dispatch(string, term, 0)
-        self.trace = list(reversed(self.trace[1:]))
-        return ast, parsed
-
     def _dispatch(self, string, term, position=0):
+        """Dispatch the parsing to specialized functions.
+
+        Arguments:
+            string (str): The string to parse.
+            term (str): The term to parse the string as.
+            position (int): The position which with to start the parse.
+                Defaults to 0.
+
+        Returns:
+            ASTNode: The root node of the AST.
+            int: The number of characters successfully parsed.
+        """
         if isinstance(term, tuple) and hasattr(self, '_match_{}'.format(term[0].lower())):
             return getattr(self, '_match_{}'.format(term[0].lower()))(string, term, position)
         elif isinstance(term, str):
@@ -266,6 +316,17 @@ class PEGParser:
         return self._fail(term, position)
 
     def _match_zeroormore(self, string, terms, position):
+        """Parse zero-or-more of a term (the * operator).
+
+        Arguments:
+            string (str): The string to parse.
+            terms ([str]): The terms to repeat, as a syntax definition.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         terms = terms[1]
         children = []
         last_pos = position
@@ -277,6 +338,17 @@ class PEGParser:
         return ASTNode('ZEROORMORE', children, string, position, last_pos), last_pos
 
     def _match_zeroorone(self, string, terms, position):
+        """Parse zero-or-one of a term (the ? operator).
+
+        Arguments:
+            string (str): The string to parse.
+            terms ([str]): The terms to repeat, as a syntax definition.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         terms = terms[1]
         ast, pos = self._dispatch(string, terms, position)
         if ast:
@@ -284,6 +356,17 @@ class PEGParser:
         return self._dispatch(string, 'empty', position)
 
     def _match_oneormore(self, string, terms, position):
+        """Parse one-or-more of a term (the + operator).
+
+        Arguments:
+            string (str): The string to parse.
+            terms ([str]): The terms to repeat, as a syntax definition.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         terms = terms[1]
         ast, pos = self._dispatch(string, terms, position)
         if not ast:
@@ -298,6 +381,17 @@ class PEGParser:
         return ASTNode('ONEORMORE', children, string, position, last_pos), last_pos
 
     def _match_conjunct(self, string, terms, position):
+        """Parse the concatenation of multiple terms.
+
+        Arguments:
+            string (str): The string to parse.
+            terms ([str]): The terms that are concatenated.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         children = []
         pos = position
         for term in terms[1:]:
@@ -313,6 +407,17 @@ class PEGParser:
         return ASTNode('AND', children, string, position, pos), pos
 
     def _match_disjunct(self, string, terms, position):
+        """Parse the disjunction of/any of multiple terms.
+
+        Arguments:
+            string (str): The string to parse.
+            terms ([str]): The terms to attempt to parse as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         for term in terms[1:]:
             ast, pos = self._dispatch(string, term, position)
             if ast:
@@ -320,6 +425,18 @@ class PEGParser:
         return None, position
 
     def _match_except(self, string, terms, position):
+        """Parse the negation of multiple terms.
+
+        Arguments:
+            string (str): The string to parse.
+            terms ([str]): The first item (index 0) is the term to match;
+                all subsequent items are terms to *not* match.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         ast, pos = self._dispatch(string, terms[1], position)
         if not ast:
             return self._fail(terms[1], position)
@@ -330,6 +447,17 @@ class PEGParser:
         return ast, pos
 
     def _match_custom(self, string, term, position):
+        """Dispatch a parse to the custom syntax definition.
+
+        Arguments:
+            string (str): The string to parse.
+            term (str): The term to parse the string as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         expression = self.custom_defs[term]
         self._debug_print('parse called at position {} with {} >>>{}'.format(
             position, term, one_line_format(string[position:position+32])
@@ -349,6 +477,17 @@ class PEGParser:
         return self._cache_and_return(term, position, ast)
 
     def _match_core(self, string, term, position):
+        """Parse a core syntax definition.
+
+        Arguments:
+            string (str): The string to parse.
+            term (str): The term to parse the string as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
             ast = ASTNode(term, [], string, position, position + len(match.group(0)))
@@ -356,21 +495,63 @@ class PEGParser:
         return self._fail(term, position)
 
     def _match_literal(self, string, term, position):
+        """Parse a literal.
+
+        Arguments:
+            string (str): The string to parse.
+            term (str): The literal to parse the string as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
         if string[position:].find(term[1:-1]) == 0:
             ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
             return self._cache_and_return(term, position, ast)
         return self._fail(term, position)
 
     def _fail(self, term, position):
+        """Fails a particular parse to allow backtracking.
+
+        Arguments:
+            term (str): The literal to parse the string as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            None: The absence of an ASTNode.
+            int: The index of the last character parsed.
+        """
         if term in self.custom_defs:
             self._debug_print('failed to match {} at position {}'.format(term, position))
         return None, position
 
     def _cache_and_return(self, term, position, ast):
+        """Cache a successful parse and return the result.
+
+        Arguments:
+            term (str): The literal to parse the string as.
+            position (int): The position which with to start the parse.
+            ast (ASTNode): The root of the parsed abstract syntax sub-tree.
+
+        Returns:
+            None: The absence of an ASTNode.
+            int: The index of the last character parsed.
+        """
         self.cache[(term, position)] = ast
         return self._get_cached(term, position)
 
     def _get_cached(self, term, position):
+        """Retrieve a parse from cache, if it exists.
+
+        Arguments:
+            term (str): The literal to parse the string as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            None: The absence of an ASTNode.
+            int: The index of the last character parsed.
+        """
         if (term, position) in self.cache:
             if term in self.custom_defs:
                 self._debug_print('matched {} at position {}'.format(term, position))
@@ -383,6 +564,7 @@ class PEGParser:
         return None, position
 
     def _debug_print(self, obj):
+        """Print debugging information with indentation."""
         if self.debug:
             print('    ' * self.depth + str(obj))
 
