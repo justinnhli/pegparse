@@ -1,6 +1,14 @@
 dist: trusty
 language: python
-python:
-  - "3.6"
+python: 3.6
+matrix:
+  include:
+    - env: SCRIPT=TEST
+    - env: SCRIPT=LINT
+    - env: SCRIPT=DOCSTYLE
+before_install:
+  - pip3 install pylint pydocstyle
 script:
-  - PYTHONPATH=. pytest
+  - if [ "$SCRIPT" = "TEST" ]; then PYTHONPATH=. pytest; fi
+  - if [ "$SCRIPT" = "LINT" ]; then pylint *.py; fi
+  - if [ "$SCRIPT" = "DOCSTYLE" ]; then pydocstyle *.py; fi
