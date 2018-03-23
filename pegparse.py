@@ -6,6 +6,7 @@ from textwrap import indent
 
 EBNF_GRAMMAR = join_path(dirname(__file__), 'ebnf.ebnf')
 
+# pylint: disable=line-too-long
 EBNF_DEFS = {
     'Syntax': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', ('ZEROORMORE', ('CONJUNCT', 'EmptyLine')), 'Definition', 'newline')), ('ZEROORMORE', ('CONJUNCT', 'EmptyLine'))),
     'Definition': ('CONJUNCT', 'Identifier', 'Whitespace', '"= "', 'Expression', '";"'),
@@ -607,15 +608,15 @@ class ASTWalker:
         else:
             return ASTWalker.EmptySentinel(), False
 
+    def parse_file(self, filepath, term=None):
+        with open(filepath) as fd:
+            return self.parse(fd.read(), term)
+
     def parse(self, text, term=None):
         if term is None:
             term = self.root_term
         ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
-
-    def parse_file(self, filepath, term=None):
-        with open(filepath) as fd:
-            return self.parse(fd.read(), term)
 
     def parse_ast(self, ast):
         return self._postorder_traversal(ast)[0]
@@ -629,6 +630,7 @@ class ASTWalker:
 
 
 class EBNFWalker(ASTWalker):
+    # pylint: disable=invalid-name,no-self-use,unused-argument
 
     def __init__(self):
         super().__init__(PEGParser(EBNF_DEFS), 'Syntax')
