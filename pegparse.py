@@ -37,6 +37,7 @@ def create_parser_from_file(filepath, debug=False):
 
     Arguments:
         filepath (str): Path to EBNF file.
+        debug (bool): Print debugging information. Defaults to False.
 
     Returns:
         PEGParser: A parser for the grammar.
@@ -51,6 +52,7 @@ def create_parser(ebnf, debug=False):
 
     Arguments:
         ebnf (str): A EBNF grammar.
+        debug (bool): Print debugging information. Defaults to False.
 
     Returns:
         PEGParser: A parser for the grammar.
@@ -85,7 +87,7 @@ class ASTNode:
 
         Arguments:
             term (str): The term this node matches.
-            children ([ASTNode]): Children nodes of this term in the grammar.
+            children (list[ASTNode]): Children nodes of this term in the grammar.
             string (str): The complete string being parsed.
             start_pos (int): Index of the first character matched by this node.
             end_pos (int): Index of the last character matched by this node.
@@ -175,7 +177,7 @@ class ASTNode:
             path (str): The path to the desired descendant.
 
         Returns:
-            [ASTNode]: All descendant ASTNodes that match the path.
+            ASTNode: All descendant ASTNodes that match the path.
         """
         path = ('*' if path is None else path).split('/')
         cur_gen = (self, )
@@ -222,7 +224,7 @@ class PEGParser:
         """Initialize the Parser.
 
         Arguments:
-            syntax ({}): Dictionary of term definitions. This is usually
+            syntax (dict[str]): Dictionary of term definitions. This is usually
                 produced by an EBNFWalker instance.
             debug (bool): Whether to print parsing information.
                 Defaults to False.
@@ -238,7 +240,7 @@ class PEGParser:
         """Parse the contents of a file as a given term.
 
         Arguments:
-            string (str): The path to the file.
+            filepath (str): The path to the file.
             term (str): The term to parse the string as.
 
         Returns:
@@ -298,6 +300,9 @@ class PEGParser:
         Returns:
             ASTNode: The root node of the AST.
             int: The number of characters successfully parsed.
+
+        Raises:
+            NameError: If the terminal is unknown.
         """
         if isinstance(term, tuple) and hasattr(self, '_match_{}'.format(term[0].lower())):
             return getattr(self, '_match_{}'.format(term[0].lower()))(string, term, position)
@@ -321,7 +326,7 @@ class PEGParser:
 
         Arguments:
             string (str): The string to parse.
-            terms ([str]): The terms to repeat, as a syntax definition.
+            terms (list[str]): The terms to repeat, as a syntax definition.
             position (int): The position which with to start the parse.
 
         Returns:
@@ -343,7 +348,7 @@ class PEGParser:
 
         Arguments:
             string (str): The string to parse.
-            terms ([str]): The terms to repeat, as a syntax definition.
+            terms (list[str]): The terms to repeat, as a syntax definition.
             position (int): The position which with to start the parse.
 
         Returns:
@@ -361,7 +366,7 @@ class PEGParser:
 
         Arguments:
             string (str): The string to parse.
-            terms ([str]): The terms to repeat, as a syntax definition.
+            terms (list[str]): The terms to repeat, as a syntax definition.
             position (int): The position which with to start the parse.
 
         Returns:
@@ -386,7 +391,7 @@ class PEGParser:
 
         Arguments:
             string (str): The string to parse.
-            terms ([str]): The terms that are concatenated.
+            terms (list[str]): The terms that are concatenated.
             position (int): The position which with to start the parse.
 
         Returns:
@@ -412,7 +417,7 @@ class PEGParser:
 
         Arguments:
             string (str): The string to parse.
-            terms ([str]): The terms to attempt to parse as.
+            terms (list[str]): The terms to attempt to parse as.
             position (int): The position which with to start the parse.
 
         Returns:
@@ -430,7 +435,7 @@ class PEGParser:
 
         Arguments:
             string (str): The string to parse.
-            terms ([str]): The first item (index 0) is the term to match;
+            terms (list[str]): The first item (index 0) is the term to match;
                 all subsequent items are terms to *not* match.
             position (int): The position which with to start the parse.
 
