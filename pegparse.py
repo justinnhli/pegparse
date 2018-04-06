@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""A Pack Rat Parsing Expression Grammer parser."""
+
 import re
 from os.path import dirname, join as join_path
 from textwrap import indent
@@ -576,11 +578,30 @@ class PEGParser:
 
 
 class ASTWalker:
+    """A traversal of an AST.
+
+    This is a base class for any processing that requires the bottom-up
+    building of structures from an AST. Subclass functions with the name
+    `parse_Term` - where Term is the name of the node in the grammar - are
+    called when a that term is encountered on the way back up the tree, ie.
+    in a post-order traversal. Each such function takes two arguments:
+
+    * ast (ASTNode): The AST rooted at that node.
+    * results (list[any]): The results from the descendants of the node.
+    """
 
     class EmptySentinel:
+        """Sentinel to indicate that no processing was done."""
+
         pass
 
     def __init__(self, parser, root_term):
+        """Initialize the traversal.
+
+        Arguments:
+            parser (ArgumentParser): The parser to use.
+            root_term (str): The term to start parsing on.
+        """
         self.parser = parser
         self.root_term = root_term
         self._terms_to_expand = set(term[6:] for term in dir(self) if term.startswith('parse_'))
@@ -595,6 +616,16 @@ class ASTWalker:
                     self._terms_to_expand.add(term)
 
     def _postorder_traversal(self, ast, depth=0):
+        """Traverses the AST in post-order.
+
+        Arguments:
+            ast (ASTNode): The AST to traverse.
+            depth (int): The current depth, for printing purposes.
+                Defaults to 0.
+
+        Returns:
+            any: Whatever the parse_* functions return, or an EmptySentinel.
+        """
         results = []
         for child in ast.descendants('*'):
             if child.term not in self._terms_to_expand:
@@ -614,20 +645,57 @@ class ASTWalker:
             return ASTWalker.EmptySentinel(), False
 
     def parse_file(self, filepath, term=None):
+        """Parse a file with the traversal.
+
+        Arguments:
+            filepath (str): The path to the file.
+            term (str): The term to start parsing on. Defaults to the term from
+                the constructor.
+
+        Returns:
+            any: Whatever the parse_* functions return.
+        """
         with open(filepath) as fd:
             return self.parse(fd.read(), term)
 
     def parse(self, text, term=None):
+        """Parse a string with the traversal.
+
+        Arguments:
+            text (str): The text to parse.
+            term (str): The term to start parsing on. Defaults to the term from
+                the constructor.
+
+        Returns:
+            any: Whatever the parse_* functions return.
+        """
         if term is None:
             term = self.root_term
         ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
 
     def parse_ast(self, ast):
+        """Parse an AST with the traversal.
+
+        Arguments:
+            ast (ASTNode): The AST to parse.
+
+        Returns:
+            any: Whatever the parse_* functions return.
+        """
         return self._postorder_traversal(ast)[0]
 
     @staticmethod
     def term_in_definition(term, definition):
+        """Determine if a definition could ever expand to include a term.
+
+        Arguments:
+            term (str): The term to find.
+            definition (dict[str]): Dictionary of term definitions.
+
+        Returns:
+            bool: Whether the term could be in the definition.
+        """
         return any(
             (term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element)))
             for element in definition
@@ -636,42 +704,135 @@ class ASTWalker:
 
 class EBNFWalker(ASTWalker):
     # pylint: disable=invalid-name,no-self-use,unused-argument
+    """A traversal of the EBNF grammar to build up term definitions."""
 
     def __init__(self):
+        """Initialize the traversal."""
         super().__init__(PEGParser(EBNF_DEFS), 'Syntax')
 
     def flatten(self, ast, results):
+        """Convert results into a tuple.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results to include.
+
+        Returns:
+            tuple[any]: The results as a tuple.
+        """
         return tuple((ast.term.upper(), *results))
 
     def parse_Syntax(self, ast, results):
+        """Parse a Syntax node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            dict[str]: Dictionary of term definitions.
+        """
         return dict(results)
 
     def parse_Definition(self, ast, results):
+        """Parse a Definition node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            tuple[str]: A single term definition.
+        """
         return tuple(results)
 
     def parse_Disjunct(self, ast, results):
+        """Parse a Disjunct node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            tuple[str]: A disjunct definition.
+        """
         return self.flatten(ast, results)
 
     def parse_Except(self, ast, results):
+        """Parse an Except node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            tuple[str]: An except definition.
+        """
         return self.flatten(ast, results)
 
     def parse_Conjunct(self, ast, results):
+        """Parse a Conjunct node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            tuple[str]: A conjunct definition.
+        """
         return self.flatten(ast, results)
 
     def parse_Repetition(self, ast, results):
+        """Parse a Repetition node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            tuple[str]: A repetition definition.
+        """
         return self.flatten(ast.first_descendant('*'), results)
 
     def parse_Reserved(self, ast, results):
+        """Parse a Reserved node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            str: A reserved (core) term.
+        """
         return ast.match
 
     def parse_Identifier(self, ast, results):
+        """Parse an Identifier node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            str: A custom term.
+        """
         return ast.match
 
     def parse_Literal(self, ast, results):
+        """Parse a Literal node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendents.
+
+        Returns:
+            str: The literal.
+        """
         return ast.match
 
 
 def main():
+    """Parse a grammar."""
     from argparse import ArgumentParser
     from fileinput import input as fileinput
     arg_parser = ArgumentParser()
