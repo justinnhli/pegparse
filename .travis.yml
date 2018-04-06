@@ -6,9 +6,11 @@ matrix:
     - env: SCRIPT=TEST
     - env: SCRIPT=LINT
     - env: SCRIPT=DOCSTYLE
+    - env: SCRIPT=COVERAGE
 before_install:
-  - pip3 install pylint pydocstyle
+  - pip3 install pylint pydocstyle coveralls
 script:
   - if [ "$SCRIPT" = "TEST" ]; then PYTHONPATH=. pytest; fi
   - if [ "$SCRIPT" = "LINT" ]; then pylint *.py; fi
   - if [ "$SCRIPT" = "DOCSTYLE" ]; then pydocstyle *.py; fi
+  - if [ "$SCRIPT" = "COVERAGE" ]; then PYTHONPATH=. coverage run tests/test_pegparse.py; coveralls; fi
