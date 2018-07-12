@@ -261,16 +261,31 @@ class PEGParser:
         Returns:
             ASTNode: The root node of the AST.
         """
+        ast, parsed = self.parse_partial(string, term)
+        assert ast is not None
+        if parsed == len(string):
+            return ast
+        else:
+            return self._fail_parse(string, parsed)
+
+    def parse_partial(self, string, term):
+        """Parse a string as a given term.
+
+        Arguments:
+            string (str): The string to parse.
+            term (str): The term to parse the string as.
+
+        Returns:
+            ASTNode: The root node of the AST.
+            int: The number of characters parsed
+        """
         self.cache = {}
         self.depth = 0
         self.trace = []
         self.max_position = 0
         ast, parsed = self._dispatch(string, term, 0)
         self.trace = list(reversed(self.trace[1:]))
-        if ast and parsed == len(string):
-            return ast
-        else:
-            return self._fail_parse(string, parsed)
+        return ast, parsed
 
     def _fail_parse(self, string, parsed):
         """Fail a parse by printing a trace and raising SyntaxError.
@@ -674,6 +689,23 @@ class ASTWalker:
         ast = self.parser.parse(text, term)
         return self.parse_ast(ast)
 
+    def parse_partial(self, text, term=None):
+        """Parse a string with the traversal.
+
+        Arguments:
+            text (str): The text to parse.
+            term (str): The term to start parsing on. Defaults to the term from
+                the constructor.
+
+        Returns:
+            any: Whatever the parse_* functions return.
+            int: The number of characters parsed
+        """
+        if term is None:
+            term = self.root_term
+        ast, parsed = self.parser.parse_partial(text, term)
+        return self.parse_ast(ast), parsed
+
     def parse_ast(self, ast):
         """Parse an AST with the traversal.
 
@@ -684,6 +716,10 @@ class ASTWalker:
             any: Whatever the parse_* functions return.
         """
         return self._postorder_traversal(ast)[0]
+        if ast is None:
+            return None
+        else:
+            return self._postorder_traversal(ast)[0]
 
     @staticmethod
     def term_in_definition(term, definition):
