@@ -715,7 +715,6 @@ class ASTWalker:
         Returns:
             any: Whatever the parse_* functions return.
         """
-        return self._postorder_traversal(ast)[0]
         if ast is None:
             return None
         else:
