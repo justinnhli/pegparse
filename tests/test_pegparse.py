@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 
+import sys
 from textwrap import dedent
+from os.path import dirname, realpath
+
+sys.path.insert(0, dirname(dirname(realpath(__file__))))
 
 from pegparse import EBNF_GRAMMAR, EBNF_DEFS, ASTNode, EBNFWalker
 from pegparse import create_parser
