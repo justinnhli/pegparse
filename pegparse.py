@@ -77,6 +77,27 @@ def one_line_format(string):
     return string
 
 
+def index_to_line_col(string, index):
+    """Convert an index in a string to line and column number.
+
+    Arguments:
+        string (str): The string.
+        index (int): The index.
+
+    Returns:
+        int: The line number of that index.
+        int: The column number of that index.
+    """
+    line_num = string.count('\n', 0, index) + 1
+    prev_newline = string.rfind('\n', 0, index)
+    if prev_newline == -1:
+        column = 0
+    else:
+        column = index - prev_newline
+    column += 1
+    return line_num, column
+
+
 class ASTNode:
     """Abstract Syntax Tree (AST) node."""
 
@@ -104,21 +125,6 @@ class ASTNode:
     def match(self):
         """Return the substring matched by this node."""
         return self.string[self.start_pos:self.end_pos]
-
-    @property
-    def line_num(self):
-        """Return the starting line number of the substring matched by this node."""
-        return self.string.count('\n', 0, self.start_pos) + 1
-
-    @property
-    def column(self):
-        """Return the starting column of the substring matched by this node."""
-        prev_newline = self.string.rfind('\n', 0, self.start_pos)
-        if prev_newline == -1:
-            column = 0
-        else:
-            column = self.start_pos - prev_newline
-        return column + 1
 
     def first_descendant(self, path=None):
         """Get the first ASTNode descendant that matches the path.
@@ -300,7 +306,8 @@ class PEGParser:
         """
         trace = []
         for position, term in self.trace:
-            trace.append('Failed to match {} at position {}'.format(term, position))
+            line, col = index_to_line_col(string, position)
+            trace.append('Failed to match {} at line {} column {} (position {})'.format(term, line, col, position))
             trace.append('  ' + one_line_format(string[position:]))
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
