@@ -268,7 +268,6 @@ class PEGParser:
             ASTNode: The root node of the AST.
         """
         ast, parsed = self.parse_partial(string, term)
-        assert ast is not None
         if parsed == len(string):
             return ast
         else:
@@ -290,7 +289,6 @@ class PEGParser:
         self.trace = []
         self.max_position = 0
         ast, parsed = self._dispatch(string, term, 0)
-        self.trace = list(reversed(self.trace[1:]))
         return ast, parsed
 
     def _fail_parse(self, string, parsed):
