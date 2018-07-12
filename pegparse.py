@@ -883,15 +883,15 @@ def main():
     arg_parser.add_argument('-v', dest='verbose', action='store_true', help='show what the parser is doing')
     arg_parser.add_argument('file', default='-', nargs='?', help='text file to be parsed')
     args = arg_parser.parse_args()
-    grammar = ''
-    with open(args.grammar, 'r') as fd:
-        grammar = fd.read()
-    parser = create_parser(grammar, debug=args.verbose)
     if args.expression:
         term = args.expression
     else:
+        grammar = ''
+        with open(args.grammar, 'r') as fd:
+            grammar = fd.read()
         term = PEGParser(EBNF_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
     contents = ''.join(fileinput(files=args.file))
+    parser = create_parser_from_file(args.grammar, debug=args.verbose)
     parser.parse(contents, term).pretty_print()
 
 
