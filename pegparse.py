@@ -762,7 +762,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             dict[str]: Dictionary of term definitions.
@@ -774,7 +774,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             tuple[str]: A single term definition.
@@ -786,7 +786,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             tuple[str]: A disjunct definition.
@@ -798,7 +798,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             tuple[str]: An except definition.
@@ -810,7 +810,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             tuple[str]: A conjunct definition.
@@ -822,7 +822,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             tuple[str]: A repetition definition.
@@ -834,7 +834,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             str: A reserved (core) term.
@@ -846,7 +846,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             str: A custom term.
@@ -858,7 +858,7 @@ class EBNFWalker(ASTWalker):
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendents.
+            results (list[any]): The results from descendants.
 
         Returns:
             str: The literal.
