@@ -9,6 +9,7 @@ sys.path.insert(0, dirname(dirname(realpath(__file__))))
 from pegparse import EBNF_GRAMMAR, EBNF_DEFS, ASTNode, EBNFWalker
 from pegparse import create_parser
 
+
 def assert_equal(actual, expected, message_stem):
     message = '\n'.join([
         message_stem,
@@ -16,6 +17,7 @@ def assert_equal(actual, expected, message_stem):
         'actual: ' + str(actual),
     ])
     assert actual == expected, message
+
 
 def test_descendants():
     # setup
@@ -58,7 +60,6 @@ def test_descendants():
         [node.term for node in descendants],
         message_stem
     )
-
 
 
 def test_ebnf_walker():
