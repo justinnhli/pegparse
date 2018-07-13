@@ -75,10 +75,27 @@ def test_ebnf_representation():
     assert defs == EBNF_DEFS, 'Parsed EBNF defs do not match internal defs'
 
 
+def test_trace():
+    with open(EBNF_GRAMMAR) as fd:
+        line = fd.readline().strip()
+    line = line[:-1] + ' ' + line[-1]
+    try:
+        walker = EBNFWalker()
+        walker.debug = True
+        walker.parse(line)
+        assert False
+    except SyntaxError as e:
+        pass
+    except Exception as e:
+        print(e)
+        assert False
+
+
 def main():
     test_descendants()
     test_ebnf_walker()
     test_ebnf_representation()
+    test_trace()
 
 
 if __name__ == '__main__':
