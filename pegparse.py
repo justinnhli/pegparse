@@ -291,7 +291,7 @@ class PEGParser:
         return ast, parsed
 
     def _fail_parse(self, string, parsed):
-        """Fail a parse by printing a trace and raising SyntaxError.
+        """Fail a parse by raising SyntaxError with a trace.
 
         Arguments:
             string (str): The string to parse.
@@ -302,10 +302,11 @@ class PEGParser:
                 before the end of the string.
         """
         trace = []
-        for position, term in self.trace:
+        for position, term in reversed(self.trace):
             line, col = index_to_line_col(string, position)
             trace.append('Failed to match {} at line {} column {} (position {})'.format(term, line, col, position))
-            trace.append('  ' + one_line_format(string[position:]))
+            trace.append('  ' + string.splitlines()[line - 1].replace('\t', ' '))
+            trace.append('  ' + (col - 1) * '-' + '^')
         message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
         raise SyntaxError(message)
 
@@ -489,11 +490,12 @@ class PEGParser:
         self._debug_print('parse called at position {} with {} >>>{}'.format(
             position, term, one_line_format(string[position:position+32])
         ))
-        max_position = self.max_position
         self.depth += 1
         ast = self._dispatch(string, expression, position)[0]
         self.depth -= 1
-        if self.max_position >= max_position and (not ast or len(self.trace) > 1):
+        if not self.trace or position > self.trace[-1][0]:
+            self.trace = [(position, term)]
+        else:
             self.trace.append((position, term))
         if not ast:
             return self._fail(term, position)
@@ -583,11 +585,7 @@ class PEGParser:
             if term in self.custom_defs:
                 self._debug_print('matched {} at position {}'.format(term, position))
             ast = self.cache[(term, position)]
-            new_position = position + len(ast.match)
-            if new_position > self.max_position:
-                self.max_position = new_position
-                self.trace = [(position, term), ]
-            return ast, new_position
+            return ast, position + len(ast.match)
         return None, position
 
     def _debug_print(self, obj):
