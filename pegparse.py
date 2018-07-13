@@ -91,10 +91,9 @@ def index_to_line_col(string, index):
     line_num = string.count('\n', 0, index) + 1
     prev_newline = string.rfind('\n', 0, index)
     if prev_newline == -1:
-        column = 0
+        column = index
     else:
         column = index - prev_newline
-    column += 1
     return line_num, column
 
 
