@@ -607,6 +607,8 @@ class ASTWalker:
     * results (list[any]): The results from the descendants of the node.
     """
 
+    PARSE_FUNCTION_PREFIX = '_parse_'
+
     class EmptySentinel:
         """Sentinel to indicate that no processing was done."""
 
@@ -621,7 +623,10 @@ class ASTWalker:
         """
         self.parser = parser
         self.root_term = root_term
-        self._terms_to_expand = set(term[6:] for term in dir(self) if term.startswith('parse_'))
+        self._terms_to_expand = set(
+            term[len('_parse_'):] for term in dir(self)
+            if term.startswith(self.PARSE_FUNCTION_PREFIX)
+        )
         noskips = list(self._terms_to_expand)
         while noskips:
             noskip = noskips.pop()
@@ -653,7 +658,7 @@ class ASTWalker:
                     results.append(result)
                 else:
                     results.extend(result)
-        function = 'parse_' + ast.term
+        function = self.PARSE_FUNCTION_PREFIX + ast.term
         if hasattr(self, function):
             return getattr(self, function)(ast, tuple(results)), True
         elif results:
@@ -759,7 +764,7 @@ class EBNFWalker(ASTWalker):
         """
         return tuple((ast.term.upper(), *results))
 
-    def parse_Syntax(self, ast, results):
+    def _parse_Syntax(self, ast, results):
         """Parse a Syntax node.
 
         Arguments:
@@ -771,7 +776,7 @@ class EBNFWalker(ASTWalker):
         """
         return dict(results)
 
-    def parse_Definition(self, ast, results):
+    def _parse_Definition(self, ast, results):
         """Parse a Definition node.
 
         Arguments:
@@ -783,7 +788,7 @@ class EBNFWalker(ASTWalker):
         """
         return tuple(results)
 
-    def parse_Disjunct(self, ast, results):
+    def _parse_Disjunct(self, ast, results):
         """Parse a Disjunct node.
 
         Arguments:
@@ -795,7 +800,7 @@ class EBNFWalker(ASTWalker):
         """
         return self.flatten(ast, results)
 
-    def parse_Except(self, ast, results):
+    def _parse_Except(self, ast, results):
         """Parse an Except node.
 
         Arguments:
@@ -807,7 +812,7 @@ class EBNFWalker(ASTWalker):
         """
         return self.flatten(ast, results)
 
-    def parse_Conjunct(self, ast, results):
+    def _parse_Conjunct(self, ast, results):
         """Parse a Conjunct node.
 
         Arguments:
@@ -819,7 +824,7 @@ class EBNFWalker(ASTWalker):
         """
         return self.flatten(ast, results)
 
-    def parse_Repetition(self, ast, results):
+    def _parse_Repetition(self, ast, results):
         """Parse a Repetition node.
 
         Arguments:
@@ -831,7 +836,7 @@ class EBNFWalker(ASTWalker):
         """
         return self.flatten(ast.first_descendant('*'), results)
 
-    def parse_Reserved(self, ast, results):
+    def _parse_Reserved(self, ast, results):
         """Parse a Reserved node.
 
         Arguments:
@@ -843,7 +848,7 @@ class EBNFWalker(ASTWalker):
         """
         return ast.match
 
-    def parse_Identifier(self, ast, results):
+    def _parse_Identifier(self, ast, results):
         """Parse an Identifier node.
 
         Arguments:
@@ -855,7 +860,7 @@ class EBNFWalker(ASTWalker):
         """
         return ast.match
 
-    def parse_Literal(self, ast, results):
+    def _parse_Literal(self, ast, results):
         """Parse a Literal node.
 
         Arguments:
