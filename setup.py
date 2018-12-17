@@ -3,11 +3,11 @@
 from setuptools import setup
 
 def main():
-    """Setup entry point."""
+    """Set up package."""
     description = ''
     try:
-        with open('README.md', 'r') as f:
-            description = f.read()
+        with open('README.md', 'r') as fd:
+            description = fd.read()
     except FileNotFoundError:
         pass
 
