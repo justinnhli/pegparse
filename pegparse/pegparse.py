@@ -612,8 +612,6 @@ class ASTWalker:
     class EmptySentinel:
         """Sentinel to indicate that no processing was done."""
 
-        pass
-
     def __init__(self, parser, root_term):
         """Initialize the traversal.
 
