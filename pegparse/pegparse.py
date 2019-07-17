@@ -125,6 +125,16 @@ class ASTNode:
         """Return the substring matched by this node."""
         return self.string[self.start_pos:self.end_pos]
 
+    @property
+    def line_num(self):
+        """Return the starting line number of the substring matched by this node."""
+        return index_to_line_col(self.string, self.start_pos)[0]
+
+    @property
+    def column(self):
+        """Return the starting column of the substring matched by this node."""
+        return index_to_line_col(self.string, self.start_pos)[1]
+
     def first_descendant(self, path=None):
         """Get the first ASTNode descendant that matches the path.
 
