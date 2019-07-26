@@ -4,6 +4,7 @@
 
 import re
 from os.path import dirname, join as join_path
+from random import Random
 from textwrap import indent
 
 EBNF_GRAMMAR = join_path(dirname(__file__), 'ebnf.ebnf')
@@ -869,6 +870,52 @@ class EBNFWalker(ASTWalker):
             str: The literal.
         """
         return ast.match
+
+
+def babble(defs, term, rng=None, max_tries=100):
+    if rng is None:
+        rng = Random(8679305)
+    if term[0] in ('"', "'"):
+        return term[1:-1]
+    result = []
+    term_def = defs[term]
+    if term_def[0] == 'CONJUNCT':
+        result.extend(
+            babble(defs, sub_term, rng)
+            for sub_term in term_def[1:]
+        )
+    elif term_def[0] == 'DISJUNCT':
+        result.append(babble(defs, rng.choice(term_def[1:]), rng))
+    elif term_def[0] == 'EXCEPT':
+        parser = PEGParser(defs)
+        found = False
+        for _ in range(max_tries):
+            candidate = babble(defs, term_def[1], rng)
+            reject = any(
+                parser.parse(candidate, reject_term)
+                for reject_term in term_def[2:]
+            )
+            if not reject:
+                found = True
+                break
+        if not found:
+            raise RuntimeError(' '.join([
+                f'Failing to generate valid {term_def[1]} after {max_tries} tries;',
+                'giving up...',
+            ]))
+        result.append(candidate)
+    elif term_def[0] == 'ZEROORMORE':
+        for _ in rng.randrange(10):
+            result.append(babble(defs, term_def[1], rng))
+    elif term_def[0] == 'ZEROORONE':
+        for _ in rng.choice([0, 1]):
+            result.append(babble(defs, term_def[1], rng))
+    elif term_def[0] == 'ONEORMORE':
+        for _ in rng.choice(1, 10):
+            result.append(babble(defs, term_def[1], rng))
+    else:
+        raise ValueError('unrecognized meta-term {term_def[0]}')
+    return ''.join(result)
 
 
 def main():
