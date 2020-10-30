@@ -251,7 +251,6 @@ class PEGParser:
         self.cache = {}
         self.depth = 0
         self.trace = []
-        self.max_position = 0
 
     def parse_file(self, filepath, term):
         """Parse the contents of a file as a given term.
@@ -296,7 +295,6 @@ class PEGParser:
         self.cache = {}
         self.depth = 0
         self.trace = []
-        self.max_position = 0
         ast, parsed = self._dispatch(string, term, 0)
         return ast, parsed
 
