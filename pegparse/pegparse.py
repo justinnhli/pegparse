@@ -98,7 +98,7 @@ def index_to_line_col(string, index):
     return line_num, column
 
 
-TraceItem = namedtuple('TraceItem', 'term, position')
+TraceItem = namedtuple('TraceItem', 'depth, term, position')
 
 
 class ASTNode:
@@ -255,6 +255,7 @@ class PEGParser:
         self.cache = {}
         self.depth = 0
         self.trace = []
+        self.max_trace_index = 0
 
     def parse_file(self, filepath, term):
         """Parse the contents of a file as a given term.
@@ -299,11 +300,29 @@ class PEGParser:
         self.cache = {}
         self.depth = 0
         self.trace = []
+        self.max_trace_index = 0
         ast, parsed = self._dispatch(string, term, 0)
         return ast, parsed
 
     def _add_trace(self, term, position):
-        self.trace.append(TraceItem(term, position))
+        trace_item = TraceItem(self.depth, term, position)
+        self.trace.append(trace_item)
+        if len(self.trace) == 1:
+            return
+        max_position = self.trace[self.max_trace_index].position
+        index = len(self.trace) - 2
+        while (
+                index >= 0
+                and trace_item.depth <= self.trace[index].depth
+                and (
+                    trace_item.position == self.trace[index].position
+                    or self.trace[index].position < max_position
+                )
+        ):
+            del self.trace[index]
+            index -= 1
+        if trace_item.position >= max_position:
+            self.max_trace_index = len(self.trace) - 1
 
     def _fail_parse(self, string, parsed):
         """Fail a parse by raising SyntaxError with a trace.
@@ -317,13 +336,18 @@ class PEGParser:
                 before the end of the string.
         """
         trace = []
-        for term, position in reversed(self.trace):
+        for depth, term, position in reversed(self.trace[:self.max_trace_index]):
             line, col = index_to_line_col(string, position)
-            trace.append('Failed to match {} at line {} column {} (position {})'.format(term, line, col, position))
-            trace.append('  ' + string.splitlines()[line - 1].replace('\t', ' '))
-            trace.append('  ' + (col - 1) * '-' + '^')
-        message = 'only parsed {} of {} characters:\n'.format(parsed, len(string)) + indent('\n'.join(trace), '  ')
-        raise SyntaxError(message)
+            trace.append('\n'.join([
+                'Failed to match {} at line {} column {} (position {})'.format(term, line, col, position),
+                '  ' + string.splitlines()[line - 1].replace('\t', ' '),
+                '  ' + (col - 1) * '-' + '^',
+            ]))
+            min_depth = depth
+        raise SyntaxError(
+            'only parsed {} of {} characters:\n'.format(parsed, len(string))
+            + indent('\n'.join(reversed(trace)), '  ')
+        )
 
     def _dispatch(self, string, term, position=0):
         """Dispatch the parsing to specialized functions.
