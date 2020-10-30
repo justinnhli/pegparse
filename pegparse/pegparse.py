@@ -3,6 +3,7 @@
 """A Pack Rat Parsing Expression Grammer parser."""
 
 import re
+from collections import namedtuple
 from os.path import dirname, join as join_path
 from textwrap import indent
 
@@ -95,6 +96,9 @@ def index_to_line_col(string, index):
     else:
         column = index - prev_newline
     return line_num, column
+
+
+TraceItem = namedtuple('TraceItem', 'term, position')
 
 
 class ASTNode:
@@ -298,6 +302,9 @@ class PEGParser:
         ast, parsed = self._dispatch(string, term, 0)
         return ast, parsed
 
+    def _add_trace(self, term, position):
+        self.trace.append(TraceItem(term, position))
+
     def _fail_parse(self, string, parsed):
         """Fail a parse by raising SyntaxError with a trace.
 
@@ -310,7 +317,7 @@ class PEGParser:
                 before the end of the string.
         """
         trace = []
-        for position, term in reversed(self.trace):
+        for term, position in reversed(self.trace):
             line, col = index_to_line_col(string, position)
             trace.append('Failed to match {} at line {} column {} (position {})'.format(term, line, col, position))
             trace.append('  ' + string.splitlines()[line - 1].replace('\t', ' '))
@@ -498,13 +505,10 @@ class PEGParser:
         self._debug_print('parse called at position {} with {} >>>{}'.format(
             position, term, one_line_format(string[position:position+32])
         ))
+        self._add_trace(term, position)
         self.depth += 1
         ast = self._dispatch(string, expression, position)[0]
         self.depth -= 1
-        if not self.trace or position > self.trace[-1][0]:
-            self.trace = [(position, term)]
-        else:
-            self.trace.append((position, term))
         if not ast:
             return self._fail(term, position)
         if isinstance(expression, tuple) and expression[0] == 'DISJUNCT':
