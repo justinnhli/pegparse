@@ -6,10 +6,10 @@ import re
 from argparse import ArgumentParser
 from collections import namedtuple
 from fileinput import input as fileinput
-from os.path import dirname, join as join_path
+from pathlib import Path
 from textwrap import indent
 
-PEG_GRAMMAR = join_path(dirname(__file__), 'peg.peg')
+PEG_GRAMMAR = Path(__file__).parent / 'peg.peg'
 
 # pylint: disable=line-too-long
 PEG_DEFS = {
