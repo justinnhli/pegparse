@@ -576,7 +576,7 @@ class PEGParser:
         return self._fail(term, position)
 
     def _fail(self, term, position):
-        """Fails a particular parse to allow backtracking.
+        """Fail a parse to allow backtracking.
 
         Arguments:
             term (str): The literal to parse the string as.
