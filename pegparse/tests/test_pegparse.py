@@ -89,11 +89,34 @@ def test_trace():
         assert False
 
 
+def test_anbncn():
+    parser = create_parser(dedent('''
+        s = &(ab "c") "a"+ bc;
+        ab = "a" ab? "b";
+        bc = "b" bc? "c";
+    '''.lstrip('\n').rstrip(' ')))
+    for n in range(1, 10):
+        s = ''.join(n * letter for letter in 'abc')
+        parser.parse(s, 's')
+        for i in range(2):
+            for d in (-1, 1):
+                s = ''.join(
+                    (n + (d if i == j else 0)) * letter
+                    for j, letter in enumerate('abc')
+                )
+                try:
+                    parser.parse(s, 's')
+                    assert False
+                except SyntaxError as e:
+                    pass
+
+
 def main():
     test_descendants()
     test_peg_walker()
     test_peg_representation()
     test_trace()
+    test_anbncn()
 
 
 if __name__ == '__main__':
