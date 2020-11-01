@@ -642,10 +642,14 @@ class PEGParser:
             return ast, position + len(ast.match)
         return None, position
 
-    def _debug_print(self, obj):
-        """Print debugging information with indentation."""
+    def _debug_print(self, message):
+        """Print debugging information with indentation.
+
+        Parameters:
+            message (str): The message to print.
+        """
         if self.debug:
-            print('    ' * self.depth + str(obj))
+            print(self.depth * '    ' + message)
 
 
 class ASTWalker:
