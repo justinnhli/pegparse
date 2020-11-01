@@ -3,7 +3,9 @@
 """A Pack Rat Parsing Expression Grammer parser."""
 
 import re
+from argparse import ArgumentParser
 from collections import namedtuple
+from fileinput import input as fileinput
 from os.path import dirname, join as join_path
 from textwrap import indent
 
@@ -892,8 +894,6 @@ class PEGWalker(ASTWalker):
 
 def main():
     """Parse a grammar."""
-    from argparse import ArgumentParser
-    from fileinput import input as fileinput
     arg_parser = ArgumentParser()
     arg_parser.add_argument('-e', dest='expression', help='starting expression; if omitted, first defined term is used')
     arg_parser.add_argument('-g', dest='grammar', default=PEG_GRAMMAR, help='PEG grammar file')
