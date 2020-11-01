@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 """A Pack Rat Parsing Expression Grammer parser."""
 
 import re
