@@ -350,7 +350,9 @@ class PEGParser:
         for _, term, position in self.trace[:self.max_trace_index]:
             line, col = index_to_line_col(string, position)
             trace.append('\n'.join([
-                'Failed to match {} at line {} column {} (position {})'.format(term, line, col, position),
+                'Failed to match {} at line {} column {} (position {})'.format(
+                    term, line, col, position
+                ),
                 '  ' + string.splitlines()[line - 1].replace('\t', ' '),
                 '  ' + (col - 1) * '-' + '^',
             ]))
@@ -424,10 +426,11 @@ class PEGParser:
         """
         children = []
         pos = position
+        repetitions = ('ZERO_OR_ONE', 'ZERO_OR_MORE', 'ONE_OR_MORE')
         for term in terms[1:]:
             child_ast, child_pos = self._match(string, term, pos)
             if child_ast:
-                if isinstance(term, tuple) and (term[0] in ('ZERO_OR_ONE', 'ZERO_OR_MORE', 'ONE_OR_MORE')):
+                if isinstance(term, tuple) and (term[0] in repetitions):
                     children.extend(child_ast.children)
                 else:
                     children.append(child_ast)
@@ -801,7 +804,13 @@ class ASTWalker:
             bool: Whether the term could be in the definition.
         """
         return term == definition or any(
-            (term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element)))
+            (
+                term == element
+                or (
+                    isinstance(element, tuple)
+                    and ASTWalker.term_in_definition(term, element)
+                )
+            )
             for element in definition
         )
 
@@ -968,21 +977,25 @@ class PEGWalker(ASTWalker):
 def main():
     """Parse a grammar."""
     arg_parser = ArgumentParser()
-    arg_parser.add_argument('-e', dest='expression', help='starting expression; if omitted, first defined term is used')
+    arg_parser.add_argument(
+        '-e', dest='expression',
+        help='starting expression; if omitted, first defined term is used',
+    )
     arg_parser.add_argument('-g', dest='grammar', default=PEG_GRAMMAR, help='PEG grammar file')
-    arg_parser.add_argument('-v', dest='verbose', action='store_true', help='show what the parser is doing')
+    arg_parser.add_argument(
+        '-v', dest='verbose', action='store_true',
+        help='show what the parser is doing',
+    )
     arg_parser.add_argument('file', default='-', nargs='?', help='text file to be parsed')
     args = arg_parser.parse_args()
     if args.expression:
         term = args.expression
     else:
-        grammar = ''
         with open(args.grammar, 'r') as fd:
-            grammar = fd.read()
-        term = PEGParser(PEG_DEFS).parse(grammar, 'Syntax').first_descendant('definition/identifier').match
-    contents = ''.join(fileinput(files=args.file))
+            grammar_ast = PEGParser(PEG_DEFS).parse(fd.read(), 'syntax')
+            term = grammar_ast.first_descendant('definition/identifier').match
     parser = create_parser_from_file(args.grammar, debug=args.verbose)
-    parser.parse(contents, term).pretty_print()
+    parser.parse(''.join(fileinput(files=args.file)), term).pretty_print()
 
 
 if __name__ == '__main__':
