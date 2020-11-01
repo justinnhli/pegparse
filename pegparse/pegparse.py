@@ -169,7 +169,7 @@ class ASTNode:
                 if children:
                     result = children[0]
                 else:
-                    return ()
+                    return None
         return result
 
     def descendants(self, path=None):
@@ -341,7 +341,7 @@ class PEGParser:
                 before the end of the string.
         """
         trace = []
-        for depth, term, position in self.trace[:self.max_trace_index]:
+        for _, term, position in self.trace[:self.max_trace_index]:
             line, col = index_to_line_col(string, position)
             trace.append('\n'.join([
                 'Failed to match {} at line {} column {} (position {})'.format(term, line, col, position),
