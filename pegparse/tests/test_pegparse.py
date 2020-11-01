@@ -22,41 +22,41 @@ def assert_equal(actual, expected, message_stem):
 def test_descendants():
     # setup
     parser = create_parser(dedent('''
-        Expression = Operand ( Operator Operand )*;
-        Operand = ParenExpression
-                | Number;
-        ParenExpression = "(" Expression ")";
-        Operator = "+"
+        expression = operand ( operator operand )*;
+        operand = paren_expression
+                | number;
+        paren_expression = "(" expression ")";
+        operator = "+"
                  | "-"
                  | "*"
                  | "/";
-        Number = ( digit )+;
+        number = ( DIGIT )+;
     '''.lstrip('\n').rstrip(' ')))
-    ast = parser.parse('(1+(2*3))-5', 'Expression')
+    ast = parser.parse('(1+(2*3))-5', 'expression')
     message_stem = 'descendants() docstring is incorrect'
     # tests
-    path = 'Operand/ParenExpression/Expression/Operand'
+    path = 'operand/paren_expression/expression/operand'
     matches = [node.match for node in ast.descendants(path)]
     assert_equal(['1', '(2*3)'], matches, message_stem)
-    descendants = ast.descendants('Operand')
+    descendants = ast.descendants('operand')
     assert_equal(
         ['(1+(2*3))', '5'],
         [node.match for node in descendants],
         message_stem
     )
     assert_equal(
-        ['Operand', 'Operand'],
+        ['operand', 'operand'],
         [node.term for node in descendants],
         message_stem
     )
-    descendants = ast.descendants('Operand/*')
+    descendants = ast.descendants('operand/*')
     assert_equal(
         ['(1+(2*3))', '5'],
         [node.match for node in descendants],
         message_stem
     )
     assert_equal(
-        ['ParenExpression', 'Number'],
+        ['paren_expression', 'number'],
         [node.term for node in descendants],
         message_stem
     )
@@ -77,13 +77,10 @@ def test_peg_representation():
 
 
 def test_trace():
-    with open(PEG_GRAMMAR) as fd:
-        line = fd.readline().strip()
-    line = line[:-1] + ' ' + line[-1]
     try:
         walker = PEGWalker()
         walker.debug = True
-        walker.parse(line)
+        walker.parse('syntax = ;')
         assert False
     except SyntaxError as e:
         pass
