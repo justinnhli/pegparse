@@ -306,7 +306,7 @@ class PEGParser:
         self.depth = 0
         self.trace = []
         self.max_trace_index = 0
-        ast, parsed = self._dispatch(string, term, 0)
+        ast, parsed = self._match(string, term, 0)
         return ast, parsed
 
     def _add_trace(self, term, position):
@@ -353,7 +353,7 @@ class PEGParser:
             + indent('\n'.join(trace), '  ')
         )
 
-    def _dispatch(self, string, term, position=0):
+    def _match(self, string, term, position=0):
         """Dispatch the parsing to specialized functions.
 
         Parameters:
@@ -399,7 +399,7 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         for term in terms[1:]:
-            ast, pos = self._dispatch(string, term, position)
+            ast, pos = self._match(string, term, position)
             if ast:
                 return ast, pos
         return None, position
@@ -419,7 +419,7 @@ class PEGParser:
         children = []
         pos = position
         for term in terms[1:]:
-            child_ast, child_pos = self._dispatch(string, term, pos)
+            child_ast, child_pos = self._match(string, term, pos)
             if child_ast:
                 if isinstance(term, tuple) and (term[0] in ('ZERO_OR_ONE', 'ZERO_OR_MORE', 'ONE_OR_MORE')):
                     children.extend(child_ast.children)
@@ -445,11 +445,11 @@ class PEGParser:
         terms = terms[1]
         children = []
         last_pos = position
-        ast, pos = self._dispatch(string, terms, position)
+        ast, pos = self._match(string, terms, position)
         while ast:
             children.extend(ast.children)
             last_pos = pos
-            ast, pos = self._dispatch(string, terms, pos)
+            ast, pos = self._match(string, terms, pos)
         return ASTNode('ZERO_OR_MORE', children, string, position, last_pos), last_pos
 
     def _match_zero_or_one(self, string, terms, position):
@@ -465,10 +465,10 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         terms = terms[1]
-        ast, pos = self._dispatch(string, terms, position)
+        ast, pos = self._match(string, terms, position)
         if ast:
             return ast, pos
-        return self._dispatch(string, 'EMPTY', position)
+        return self._match(string, 'EMPTY', position)
 
     def _match_one_or_more(self, string, terms, position):
         """Parse one-or-more of a term (the + operator).
@@ -483,16 +483,16 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         terms = terms[1]
-        ast, pos = self._dispatch(string, terms, position)
+        ast, pos = self._match(string, terms, position)
         if not ast:
             return ast, pos
         children = ast.children
         last_pos = pos
-        ast, pos = self._dispatch(string, terms, pos)
+        ast, pos = self._match(string, terms, pos)
         while ast:
             children.extend(ast.children)
             last_pos = pos
-            ast, pos = self._dispatch(string, terms, pos)
+            ast, pos = self._match(string, terms, pos)
         return ASTNode('ONE_OR_MORE', children, string, position, last_pos), last_pos
 
     def _match_and(self, string, terms, position):
@@ -508,10 +508,10 @@ class PEGParser:
             ASTNode: The root node of this abstract syntax sub-tree.
             int: The index of the last character parsed.
         """
-        ast, _ = self._dispatch(string, terms[1], position)
+        ast, _ = self._match(string, terms[1], position)
         if not ast:
             return self._fail(terms[1], position)
-        return self._dispatch(string, 'EMPTY', position)
+        return self._match(string, 'EMPTY', position)
 
     def _match_not(self, string, terms, position):
         """Parse the negation of a term.
@@ -526,10 +526,10 @@ class PEGParser:
             ASTNode: The root node of this abstract syntax sub-tree.
             int: The index of the last character parsed.
         """
-        ast, _ = self._dispatch(string, terms[1], position)
+        ast, _ = self._match(string, terms[1], position)
         if ast:
             return self._fail(terms[1], position)
-        return self._dispatch(string, 'EMPTY', position)
+        return self._match(string, 'EMPTY', position)
 
     def _match_custom(self, string, term, position):
         """Dispatch a parse to the custom syntax definition.
@@ -549,7 +549,7 @@ class PEGParser:
         ))
         self._add_trace(term, position)
         self.depth += 1
-        ast, _ = self._dispatch(string, expression, position)
+        ast, _ = self._match(string, expression, position)
         self.depth -= 1
         if not ast:
             return self._fail(term, position)
