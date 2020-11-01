@@ -336,17 +336,16 @@ class PEGParser:
                 before the end of the string.
         """
         trace = []
-        for depth, term, position in reversed(self.trace[:self.max_trace_index]):
+        for depth, term, position in self.trace[:self.max_trace_index]:
             line, col = index_to_line_col(string, position)
             trace.append('\n'.join([
                 'Failed to match {} at line {} column {} (position {})'.format(term, line, col, position),
                 '  ' + string.splitlines()[line - 1].replace('\t', ' '),
                 '  ' + (col - 1) * '-' + '^',
             ]))
-            min_depth = depth
         raise SyntaxError(
             'only parsed {} of {} characters:\n'.format(parsed, len(string))
-            + indent('\n'.join(reversed(trace)), '  ')
+            + indent('\n'.join(trace), '  ')
         )
 
     def _dispatch(self, string, term, position=0):
