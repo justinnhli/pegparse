@@ -41,7 +41,7 @@ PEG_DEFS = {
 def create_parser_from_file(filepath, debug=False):
     """Create parser from a PEG grammar file.
 
-    Arguments:
+    Parameters:
         filepath (str): Path to PEG file.
         debug (bool): Print debugging information. Defaults to False.
 
@@ -56,7 +56,7 @@ def create_parser_from_file(filepath, debug=False):
 def create_parser(peg, debug=False):
     """Create parser from a PEG grammar.
 
-    Arguments:
+    Parameters:
         peg (str): A PEG grammar.
         debug (bool): Print debugging information. Defaults to False.
 
@@ -69,7 +69,7 @@ def create_parser(peg, debug=False):
 def one_line_format(string):
     """Escape tabs and spaces in a string.
 
-    Arguments:
+    Parameters:
         string (str): The string to escape.
 
     Returns:
@@ -84,7 +84,7 @@ def one_line_format(string):
 def index_to_line_col(string, index):
     """Convert an index in a string to line and column number.
 
-    Arguments:
+    Parameters:
         string (str): The string.
         index (int): The index.
 
@@ -114,7 +114,7 @@ class ASTNode:
         range(), ie. the substring
             string[start_pos:end_pos]
 
-        Arguments:
+        Parameters:
             term (str): The term this node matches.
             children (list[ASTNode]): Children nodes of this term in the grammar.
             string (str): The complete string being parsed.
@@ -148,7 +148,7 @@ class ASTNode:
         See the docstring for descendants() for a description of the path
         argument.
 
-        Arguments:
+        Parameters:
             path (str): The path to the desired descendant.
 
         Returns:
@@ -197,7 +197,7 @@ class ASTNode:
         and '5', but while the first path would return two Operand ASTNodes,
         the second path would return a ParenExpression and a Number ASTNode.
 
-        Arguments:
+        Parameters:
             path (str): The path to the desired descendant.
 
         Returns:
@@ -247,7 +247,7 @@ class PEGParser:
     def __init__(self, syntax, debug=False):
         """Initialize the Parser.
 
-        Arguments:
+        Parameters:
             syntax (dict[str]): Dictionary of term definitions. This is usually
                 produced by an PEGWalker instance.
             debug (bool): Whether to print parsing information.
@@ -263,7 +263,7 @@ class PEGParser:
     def parse_file(self, filepath, term):
         """Parse the contents of a file as a given term.
 
-        Arguments:
+        Parameters:
             filepath (str): The path to the file.
             term (str): The term to parse the string as.
 
@@ -276,7 +276,7 @@ class PEGParser:
     def parse(self, string, term):
         """Parse a string as a given term.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
 
@@ -292,7 +292,7 @@ class PEGParser:
     def parse_partial(self, string, term):
         """Parse a string as a given term.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
 
@@ -330,7 +330,7 @@ class PEGParser:
     def _fail_parse(self, string, parsed):
         """Fail a parse by raising SyntaxError with a trace.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             parsed (int): The number of characters successfully parsed.
 
@@ -354,7 +354,7 @@ class PEGParser:
     def _dispatch(self, string, term, position=0):
         """Dispatch the parsing to specialized functions.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
             position (int): The position which with to start the parse.
@@ -387,7 +387,7 @@ class PEGParser:
     def _match_choice(self, string, terms, position):
         """Parse the disjunction of/any of multiple terms.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The terms to attempt to parse as.
             position (int): The position which with to start the parse.
@@ -405,7 +405,7 @@ class PEGParser:
     def _match_sequence(self, string, terms, position):
         """Parse the concatenation of multiple terms.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The terms that are concatenated.
             position (int): The position which with to start the parse.
@@ -431,7 +431,7 @@ class PEGParser:
     def _match_zero_or_more(self, string, terms, position):
         """Parse zero-or-more of a term (the * operator).
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The terms to repeat, as a syntax definition.
             position (int): The position which with to start the parse.
@@ -453,7 +453,7 @@ class PEGParser:
     def _match_zero_or_one(self, string, terms, position):
         """Parse zero-or-one of a term (the ? operator).
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The terms to repeat, as a syntax definition.
             position (int): The position which with to start the parse.
@@ -471,7 +471,7 @@ class PEGParser:
     def _match_one_or_more(self, string, terms, position):
         """Parse one-or-more of a term (the + operator).
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The terms to repeat, as a syntax definition.
             position (int): The position which with to start the parse.
@@ -496,7 +496,7 @@ class PEGParser:
     def _match_and(self, string, terms, position):
         """Parse the negation of a term.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The first item (index 0) is the term to match;
                 all subsequent items are terms to *not* match. FIXME
@@ -514,7 +514,7 @@ class PEGParser:
     def _match_not(self, string, terms, position):
         """Parse the negation of a term.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             terms (list[str]): The first item (index 0) is the term to match;
                 all subsequent items are terms to *not* match. FIXME
@@ -532,7 +532,7 @@ class PEGParser:
     def _match_custom(self, string, term, position):
         """Dispatch a parse to the custom syntax definition.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
             position (int): The position which with to start the parse.
@@ -560,7 +560,7 @@ class PEGParser:
     def _match_core(self, string, term, position):
         """Parse a core syntax definition.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
             position (int): The position which with to start the parse.
@@ -578,7 +578,7 @@ class PEGParser:
     def _match_literal(self, string, term, position):
         """Parse a literal.
 
-        Arguments:
+        Parameters:
             string (str): The string to parse.
             term (str): The literal to parse the string as.
             position (int): The position which with to start the parse.
@@ -595,7 +595,7 @@ class PEGParser:
     def _fail(self, term, position):
         """Fail a parse to allow backtracking.
 
-        Arguments:
+        Parameters:
             term (str): The literal to parse the string as.
             position (int): The position which with to start the parse.
 
@@ -610,7 +610,7 @@ class PEGParser:
     def _cache_and_return(self, term, position, ast):
         """Cache a successful parse and return the result.
 
-        Arguments:
+        Parameters:
             term (str): The literal to parse the string as.
             position (int): The position which with to start the parse.
             ast (ASTNode): The root of the parsed abstract syntax sub-tree.
@@ -625,7 +625,7 @@ class PEGParser:
     def _get_cached(self, term, position):
         """Retrieve a parse from cache, if it exists.
 
-        Arguments:
+        Parameters:
             term (str): The literal to parse the string as.
             position (int): The position which with to start the parse.
 
@@ -667,7 +667,7 @@ class ASTWalker:
     def __init__(self, parser, root_term):
         """Initialize the traversal.
 
-        Arguments:
+        Parameters:
             parser (ArgumentParser): The parser to use.
             root_term (str): The term to start parsing on.
         """
@@ -690,7 +690,7 @@ class ASTWalker:
     def _postorder_traversal(self, ast, depth=0):
         """Traverses the AST in post-order.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST to traverse.
             depth (int): The current depth, for printing purposes.
                 Defaults to 0.
@@ -719,7 +719,7 @@ class ASTWalker:
     def parse_file(self, filepath, term=None):
         """Parse a file with the traversal.
 
-        Arguments:
+        Parameters:
             filepath (str): The path to the file.
             term (str): The term to start parsing on. Defaults to the term from
                 the constructor.
@@ -733,7 +733,7 @@ class ASTWalker:
     def parse(self, text, term=None):
         """Parse a string with the traversal.
 
-        Arguments:
+        Parameters:
             text (str): The text to parse.
             term (str): The term to start parsing on. Defaults to the term from
                 the constructor.
@@ -749,7 +749,7 @@ class ASTWalker:
     def parse_partial(self, text, term=None):
         """Parse a string with the traversal.
 
-        Arguments:
+        Parameters:
             text (str): The text to parse.
             term (str): The term to start parsing on. Defaults to the term from
                 the constructor.
@@ -766,7 +766,7 @@ class ASTWalker:
     def parse_ast(self, ast):
         """Parse an AST with the traversal.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST to parse.
 
         Returns:
@@ -781,7 +781,7 @@ class ASTWalker:
     def term_in_definition(term, definition):
         """Determine if a definition could ever expand to include a term.
 
-        Arguments:
+        Parameters:
             term (str): The term to find.
             definition (dict[str]): Dictionary of term definitions.
 
@@ -805,7 +805,7 @@ class PEGWalker(ASTWalker):
     def _parse_syntax(self, ast, results):
         """Parse a Syntax node.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST term to head the tuple.
             results (list[any]): The results from descendants.
 
@@ -820,7 +820,7 @@ class PEGWalker(ASTWalker):
     def _parse_choice(self, ast, results):
         """Parse a Choice node.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST term to head the tuple.
             results (list[any]): The results from descendants.
 
@@ -856,7 +856,7 @@ class PEGWalker(ASTWalker):
     def _parse_identifier(self, ast, results):
         """Parse an Identifier node.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST term to head the tuple.
             results (list[any]): The results from descendants.
 
@@ -868,7 +868,7 @@ class PEGWalker(ASTWalker):
     def _parse_keyword(self, ast, results):
         """Parse a Reserved node.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST term to head the tuple.
             results (list[any]): The results from descendants.
 
@@ -880,7 +880,7 @@ class PEGWalker(ASTWalker):
     def _parse_literal(self, ast, results):
         """Parse a Literal node.
 
-        Arguments:
+        Parameters:
             ast (ASTNode): The AST term to head the tuple.
             results (list[any]): The results from descendants.
 
