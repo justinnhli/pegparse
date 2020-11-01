@@ -890,26 +890,6 @@ class PEGWalker(ASTWalker):
         return ast.match
 
 
-def test():
-    result = PEGWalker().parse_file('peg.peg', 'syntax')
-    # check keys
-    if set(result.keys()) != set(PEG_DEFS.keys()):
-        diff1 = set(result.keys()) - set(PEG_DEFS.keys())
-        print(f'new parse has extra keys: {sorted(diff1)}')
-        diff2 = set(PEG_DEFS.keys()) - set(result.keys())
-        print(f'old parse has extra keys: {sorted(diff2)}')
-    # check values
-    for key in sorted(result.keys()):
-        if result[key] != PEG_DEFS[key]:
-            print(f'new parse for key "{key}":')
-            print('   ', result[key])
-            print(f'old parse for key "{key}":')
-            print('   ', PEG_DEFS[key])
-            assert False
-    assert PEGWalker().parse_file('peg.peg', 'syntax') == PEG_DEFS
-    print('pass')
-
-
 def main():
     """Parse a grammar."""
     from argparse import ArgumentParser
