@@ -11,27 +11,30 @@ PEG_GRAMMAR = join_path(dirname(__file__), 'peg.peg')
 
 # pylint: disable=line-too-long
 PEG_DEFS = {
-    'Syntax': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', ('ZEROORMORE', ('CONJUNCT', 'EmptyLine')), 'Definition', 'newline')), ('ZEROORMORE', ('CONJUNCT', 'EmptyLine'))),
-    'Definition': ('CONJUNCT', 'Identifier', 'Whitespace', '"= "', 'Expression', '";"'),
-    'Expression': ('DISJUNCT', 'Disjunct', 'Except', 'Conjunct'),
-    'Conjunct': ('CONJUNCT', 'Item', ('ZEROORMORE', ('CONJUNCT', '" "', 'Item'))),
-    'Disjunct': ('CONJUNCT', 'Atom', ('ONEORMORE', ('CONJUNCT', 'newline', 'Whitespace', '"| "', 'Atom'))),
-    'Except': ('CONJUNCT', 'Atom', ('ONEORMORE', ('CONJUNCT', 'newline', 'Whitespace', '"- "', 'Atom'))),
-    'Item': ('DISJUNCT', 'Repetition', 'Atom'),
-    'Repetition': ('DISJUNCT', 'ZeroOrMore', 'ZeroOrOne', 'OneOrMore'),
-    'ZeroOrMore': ('CONJUNCT', '"( "', 'Conjunct', '" )*"'),
-    'ZeroOrOne': ('CONJUNCT', '"( "', 'Conjunct', '" )?"'),
-    'OneOrMore': ('CONJUNCT', '"( "', 'Conjunct', '" )+"'),
-    'Atom': ('DISJUNCT', 'Identifier', 'Reserved', 'Literal'),
-    'Identifier': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', 'upper', ('ZEROORMORE', ('CONJUNCT', 'lower'))))),
-    'Reserved': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', 'lower'))),
-    'Literal': ('DISJUNCT', 'DString', 'SString'),
-    'DString': ('CONJUNCT', '\'"\'', ('ZEROORMORE', ('CONJUNCT', 'NoDQuote')), '\'"\''),
-    'SString': ('CONJUNCT', '"\'"', ('ZEROORMORE', ('CONJUNCT', 'NoSQuote')), '"\'"'),
-    'NoDQuote': ('EXCEPT', 'print', '\'"\''),
-    'NoSQuote': ('EXCEPT', 'print', '"\'"'),
-    'Whitespace': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', 'blank'))),
-    'EmptyLine': ('CONJUNCT', ('ZEROORONE', ('CONJUNCT', '"#"', ('ZEROORMORE', ('CONJUNCT', 'print')))), 'newline'),
+    'syntax': ('SEQUENCE', 'opt_space', ('ZERO_OR_MORE', ('SEQUENCE', 'definition', 'opt_space'))),
+    'definition': ('SEQUENCE', 'identifier', 'opt_space', '"="', 'opt_space', 'expression', 'opt_space', '";"'),
+    'expression': 'choice',
+    'choice': ('SEQUENCE', ('ZERO_OR_ONE', ('SEQUENCE', '"|"', 'opt_space')), 'sequence', ('ZERO_OR_MORE', ('SEQUENCE', 'opt_space', '"|"', 'opt_space', 'sequence'))),
+    'sequence': ('SEQUENCE', 'item', ('ZERO_OR_MORE', ('SEQUENCE', 'req_space', 'item'))),
+    'item': ('CHOICE', 'zero_or_more', 'zero_or_one', 'one_or_more', 'and_predicate', 'not_predicate', 'term'),
+    'zero_or_more': ('SEQUENCE', 'term', 'opt_space', '"*"'),
+    'zero_or_one': ('SEQUENCE', 'term', 'opt_space', '"?"'),
+    'one_or_more': ('SEQUENCE', 'term', 'opt_space', '"+"'),
+    'and_predicate': ('SEQUENCE', '"&"', 'opt_space', 'term'),
+    'not_predicate': ('SEQUENCE', '"!"', 'opt_space', 'term'),
+    'term': ('CHOICE', 'paren', 'atom'),
+    'paren': ('SEQUENCE', '"("', 'opt_space', 'expression', 'opt_space', '")"'),
+    'atom': ('CHOICE', 'identifier', 'keyword', 'literal'),
+    'identifier': ('SEQUENCE', ('ONE_OR_MORE', 'LOWER'), ('ZERO_OR_MORE', ('SEQUENCE', '"_"', ('ONE_OR_MORE', 'LOWER')))),
+    'keyword': ('ONE_OR_MORE', 'UPPER'),
+    'literal': ('CHOICE', 'd_string', 's_string'),
+    'd_string': ('SEQUENCE', '\'"\'', ('ZERO_OR_MORE', 'no_d_quote'), '\'"\''),
+    's_string': ('SEQUENCE', '"\'"', ('ZERO_OR_MORE', 'no_s_quote'), '"\'"'),
+    'no_d_quote': ('SEQUENCE', ('NOT', '\'"\''), 'PRINT'),
+    'no_s_quote': ('SEQUENCE', ('NOT', '"\'"'), 'PRINT'),
+    'opt_space': ('ZERO_OR_MORE', 'space'),
+    'req_space': ('ONE_OR_MORE', 'space'),
+    'space': ('CHOICE', ('SEQUENCE', '"#"', ('ZERO_OR_MORE', 'PRINT'), 'NEWLINE'), 'BLANK', 'NEWLINE'),
 }
 
 
@@ -227,18 +230,18 @@ class PEGParser:
     """
 
     CORE_DEFS = {
-        'empty': r'',
-        'blank': r'[ \t]',
-        'digit': r'[0-9]',
-        'upper': r'[A-Z]',
-        'lower': r'[a-z]',
-        'alpha': r'[A-Za-z]',
-        'alnum': r'[0-9A-Za-z]',
-        'punct': r"[-!\"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]",
-        'print': r'[ -~]',
-        'unicode': r'[^\x00-\x7F]',
-        'newline': r'\n',
-        'tab': r'\t',
+        'EMPTY': r'',
+        'BLANK': r'[ \t]',
+        'DIGIT': r'[0-9]',
+        'UPPER': r'[A-Z]',
+        'LOWER': r'[a-z]',
+        'ALPHA': r'[A-Za-z]',
+        'ALNUM': r'[0-9A-Za-z]',
+        'PUNCT': r"[-!\"#$%&'()*+,./:;<=>?@[\\\]^_`{|}~]",
+        'PRINT': r'[ -~]',
+        'UNICODE': r'[^\x00-\x7F]',
+        'NEWLINE': r'\n',
+        'TAB': r'\t',
     }
 
     def __init__(self, syntax, debug=False):
@@ -381,7 +384,51 @@ class PEGParser:
         self._debug_print('unknown non-terminal: {}'.format(term))
         return self._fail(term, position)
 
-    def _match_zeroormore(self, string, terms, position):
+    def _match_choice(self, string, terms, position):
+        """Parse the disjunction of/any of multiple terms.
+
+        Arguments:
+            string (str): The string to parse.
+            terms (list[str]): The terms to attempt to parse as.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
+        for term in terms[1:]:
+            ast, pos = self._dispatch(string, term, position)
+            if ast:
+                return ast, pos
+        return None, position
+
+    def _match_sequence(self, string, terms, position):
+        """Parse the concatenation of multiple terms.
+
+        Arguments:
+            string (str): The string to parse.
+            terms (list[str]): The terms that are concatenated.
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
+        children = []
+        pos = position
+        for term in terms[1:]:
+            child_ast, child_pos = self._dispatch(string, term, pos)
+            if child_ast:
+                if isinstance(term, tuple) and (term[0] in ('ZERO_OR_ONE', 'ZERO_OR_MORE', 'ONE_OR_MORE')):
+                    children.extend(child_ast.children)
+                else:
+                    children.append(child_ast)
+                pos = child_pos
+            else:
+                return None, child_pos
+        return ASTNode('SEQUENCE', children, string, position, pos), pos
+
+    def _match_zero_or_more(self, string, terms, position):
         """Parse zero-or-more of a term (the * operator).
 
         Arguments:
@@ -401,9 +448,9 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self._dispatch(string, terms, pos)
-        return ASTNode('ZEROORMORE', children, string, position, last_pos), last_pos
+        return ASTNode('ZERO_OR_MORE', children, string, position, last_pos), last_pos
 
-    def _match_zeroorone(self, string, terms, position):
+    def _match_zero_or_one(self, string, terms, position):
         """Parse zero-or-one of a term (the ? operator).
 
         Arguments:
@@ -419,9 +466,9 @@ class PEGParser:
         ast, pos = self._dispatch(string, terms, position)
         if ast:
             return ast, pos
-        return self._dispatch(string, 'empty', position)
+        return self._dispatch(string, 'EMPTY', position)
 
-    def _match_oneormore(self, string, terms, position):
+    def _match_one_or_more(self, string, terms, position):
         """Parse one-or-more of a term (the + operator).
 
         Arguments:
@@ -444,73 +491,43 @@ class PEGParser:
             children.extend(ast.children)
             last_pos = pos
             ast, pos = self._dispatch(string, terms, pos)
-        return ASTNode('ONEORMORE', children, string, position, last_pos), last_pos
+        return ASTNode('ONE_OR_MORE', children, string, position, last_pos), last_pos
 
-    def _match_conjunct(self, string, terms, position):
-        """Parse the concatenation of multiple terms.
-
-        Arguments:
-            string (str): The string to parse.
-            terms (list[str]): The terms that are concatenated.
-            position (int): The position which with to start the parse.
-
-        Returns:
-            ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
-        """
-        children = []
-        pos = position
-        for term in terms[1:]:
-            child_ast, child_pos = self._dispatch(string, term, pos)
-            if child_ast:
-                if isinstance(term, tuple) and (term[0] in ('ZEROORONE', 'ZEROORMORE', 'ONEORMORE')):
-                    children.extend(child_ast.children)
-                else:
-                    children.append(child_ast)
-                pos = child_pos
-            else:
-                return None, child_pos
-        return ASTNode('AND', children, string, position, pos), pos
-
-    def _match_disjunct(self, string, terms, position):
-        """Parse the disjunction of/any of multiple terms.
-
-        Arguments:
-            string (str): The string to parse.
-            terms (list[str]): The terms to attempt to parse as.
-            position (int): The position which with to start the parse.
-
-        Returns:
-            ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
-        """
-        for term in terms[1:]:
-            ast, pos = self._dispatch(string, term, position)
-            if ast:
-                return ast, pos
-        return None, position
-
-    def _match_except(self, string, terms, position):
-        """Parse the negation of multiple terms.
+    def _match_and(self, string, terms, position):
+        """Parse the negation of a term.
 
         Arguments:
             string (str): The string to parse.
             terms (list[str]): The first item (index 0) is the term to match;
-                all subsequent items are terms to *not* match.
+                all subsequent items are terms to *not* match. FIXME
             position (int): The position which with to start the parse.
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
             int: The index of the last character parsed.
         """
-        ast, pos = self._dispatch(string, terms[1], position)
+        ast, _ = self._dispatch(string, terms[1], position)
         if not ast:
             return self._fail(terms[1], position)
-        for term in terms[2:]:
-            nast = self._dispatch(string, term, position)[0]
-            if nast and ast.match == nast.match:
-                return self._fail(term, position)
-        return ast, pos
+        return self._dispatch(string, 'EMPTY', position)
+
+    def _match_not(self, string, terms, position):
+        """Parse the negation of a term.
+
+        Arguments:
+            string (str): The string to parse.
+            terms (list[str]): The first item (index 0) is the term to match;
+                all subsequent items are terms to *not* match. FIXME
+            position (int): The position which with to start the parse.
+
+        Returns:
+            ASTNode: The root node of this abstract syntax sub-tree.
+            int: The index of the last character parsed.
+        """
+        ast, _ = self._dispatch(string, terms[1], position)
+        if ast:
+            return self._fail(terms[1], position)
+        return self._dispatch(string, 'EMPTY', position)
 
     def _match_custom(self, string, term, position):
         """Dispatch a parse to the custom syntax definition.
@@ -525,19 +542,19 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         expression = self.custom_defs[term]
-        self._debug_print('parse called at position {} with {} >>>{}'.format(
-            position, term, one_line_format(string[position:position+32])
+        self._debug_print('parsing {} at position {} >>>{}'.format(
+            term, position, one_line_format(string[position:position+32])
         ))
         self._add_trace(term, position)
         self.depth += 1
-        ast = self._dispatch(string, expression, position)[0]
+        ast, _ = self._dispatch(string, expression, position)
         self.depth -= 1
         if not ast:
             return self._fail(term, position)
-        if isinstance(expression, tuple) and expression[0] == 'DISJUNCT':
-            ast = ASTNode(term, [ast], string, position, position + len(ast.match))
-        else:
+        if isinstance(expression, tuple) and expression[0] != 'CHOICE':
             ast.term = term
+        else:
+            ast = ASTNode(term, [ast], string, position, position + len(ast.match))
         return self._cache_and_return(term, position, ast)
 
     def _match_core(self, string, term, position):
@@ -657,7 +674,7 @@ class ASTWalker:
         self.parser = parser
         self.root_term = root_term
         self._terms_to_expand = set(
-            term[len('_parse_'):] for term in dir(self)
+            term[len(self.PARSE_FUNCTION_PREFIX):] for term in dir(self)
             if term.startswith(self.PARSE_FUNCTION_PREFIX)
         )
         noskips = list(self._terms_to_expand)
@@ -771,7 +788,7 @@ class ASTWalker:
         Returns:
             bool: Whether the term could be in the definition.
         """
-        return any(
+        return term == definition or any(
             (term == element or (isinstance(element, tuple) and ASTWalker.term_in_definition(term, element)))
             for element in definition
         )
@@ -783,21 +800,9 @@ class PEGWalker(ASTWalker):
 
     def __init__(self):
         """Initialize the traversal."""
-        super().__init__(PEGParser(PEG_DEFS), 'Syntax')
+        super().__init__(PEGParser(PEG_DEFS), 'syntax')
 
-    def flatten(self, ast, results):
-        """Convert results into a tuple.
-
-        Arguments:
-            ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results to include.
-
-        Returns:
-            tuple[any]: The results as a tuple.
-        """
-        return tuple((ast.term.upper(), *results))
-
-    def _parse_Syntax(self, ast, results):
+    def _parse_syntax(self, ast, results):
         """Parse a Syntax node.
 
         Arguments:
@@ -807,81 +812,48 @@ class PEGWalker(ASTWalker):
         Returns:
             dict[str]: Dictionary of term definitions.
         """
-        return dict(results)
+        return {result[0]: result[1] for result in results}
 
-    def _parse_Definition(self, ast, results):
-        """Parse a Definition node.
+    def _parse_definition(self, ast, results):
+        return results
 
-        Arguments:
-            ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendants.
-
-        Returns:
-            tuple[str]: A single term definition.
-        """
-        return tuple(results)
-
-    def _parse_Disjunct(self, ast, results):
-        """Parse a Disjunct node.
+    def _parse_choice(self, ast, results):
+        """Parse a Choice node.
 
         Arguments:
             ast (ASTNode): The AST term to head the tuple.
             results (list[any]): The results from descendants.
 
         Returns:
-            tuple[str]: A disjunct definition.
+            tuple[str]: A choice definition.
         """
-        return self.flatten(ast, results)
+        if len(results) == 1:
+            return results[0]
+        else:
+            return ('CHOICE', *results)
 
-    def _parse_Except(self, ast, results):
-        """Parse an Except node.
+    def _parse_sequence(self, ast, results):
+        if len(results) == 1:
+            return results[0]
+        else:
+            return ('SEQUENCE', *results)
 
-        Arguments:
-            ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendants.
+    def _parse_zero_or_more(self, ast, results):
+        return ('ZERO_OR_MORE', *results)
 
-        Returns:
-            tuple[str]: An except definition.
-        """
-        return self.flatten(ast, results)
+    def _parse_zero_or_one(self, ast, results):
+        return ('ZERO_OR_ONE', *results)
 
-    def _parse_Conjunct(self, ast, results):
-        """Parse a Conjunct node.
+    def _parse_one_or_more(self, ast, results):
+        return ('ONE_OR_MORE', *results)
 
-        Arguments:
-            ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendants.
+    def _parse_and_predicate(self, ast, results):
+        return ('AND', *results)
 
-        Returns:
-            tuple[str]: A conjunct definition.
-        """
-        return self.flatten(ast, results)
+    def _parse_not_predicate(self, ast, results):
+        return ('NOT', *results)
 
-    def _parse_Repetition(self, ast, results):
-        """Parse a Repetition node.
-
-        Arguments:
-            ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendants.
-
-        Returns:
-            tuple[str]: A repetition definition.
-        """
-        return self.flatten(ast.first_descendant('*'), results)
-
-    def _parse_Reserved(self, ast, results):
-        """Parse a Reserved node.
-
-        Arguments:
-            ast (ASTNode): The AST term to head the tuple.
-            results (list[any]): The results from descendants.
-
-        Returns:
-            str: A reserved (core) term.
-        """
-        return ast.match
-
-    def _parse_Identifier(self, ast, results):
+    def _parse_identifier(self, ast, results):
         """Parse an Identifier node.
 
         Arguments:
@@ -893,7 +865,19 @@ class PEGWalker(ASTWalker):
         """
         return ast.match
 
-    def _parse_Literal(self, ast, results):
+    def _parse_keyword(self, ast, results):
+        """Parse a Reserved node.
+
+        Arguments:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            str: A keyword (core term).
+        """
+        return ast.match
+
+    def _parse_literal(self, ast, results):
         """Parse a Literal node.
 
         Arguments:
@@ -904,6 +888,26 @@ class PEGWalker(ASTWalker):
             str: The literal.
         """
         return ast.match
+
+
+def test():
+    result = PEGWalker().parse_file('peg.peg', 'syntax')
+    # check keys
+    if set(result.keys()) != set(PEG_DEFS.keys()):
+        diff1 = set(result.keys()) - set(PEG_DEFS.keys())
+        print(f'new parse has extra keys: {sorted(diff1)}')
+        diff2 = set(PEG_DEFS.keys()) - set(result.keys())
+        print(f'old parse has extra keys: {sorted(diff2)}')
+    # check values
+    for key in sorted(result.keys()):
+        if result[key] != PEG_DEFS[key]:
+            print(f'new parse for key "{key}":')
+            print('   ', result[key])
+            print(f'old parse for key "{key}":')
+            print('   ', PEG_DEFS[key])
+            assert False
+    assert PEGWalker().parse_file('peg.peg', 'syntax') == PEG_DEFS
+    print('pass')
 
 
 def main():
@@ -922,7 +926,7 @@ def main():
         grammar = ''
         with open(args.grammar, 'r') as fd:
             grammar = fd.read()
-        term = PEGParser(PEG_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
+        term = PEGParser(PEG_DEFS).parse(grammar, 'Syntax').first_descendant('definition/identifier').match
     contents = ''.join(fileinput(files=args.file))
     parser = create_parser_from_file(args.grammar, debug=args.verbose)
     parser.parse(contents, term).pretty_print()

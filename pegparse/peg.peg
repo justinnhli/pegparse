@@ -1,31 +1,37 @@
-Syntax      = ( ( EmptyLine )* Definition newline )+ ( EmptyLine )*;
-Definition  = Identifier Whitespace "= " Expression ";";
-Expression  = Disjunct
-            | Except
-			| Conjunct;
-Conjunct    = Item ( " " Item )*;
-Disjunct    = Atom ( newline Whitespace "| " Atom )+;
-Except      = Atom ( newline Whitespace "- " Atom )+;
-Item        = Repetition
-            | Atom;
-Repetition  = ZeroOrMore
-            | ZeroOrOne
-            | OneOrMore;
-ZeroOrMore  = "( " Conjunct " )*";
-ZeroOrOne   = "( " Conjunct " )?";
-OneOrMore   = "( " Conjunct " )+";
-Atom        = Identifier
-            | Reserved
-            | Literal;
-Identifier  = ( upper ( lower )* )+;
-Reserved    = ( lower )+;
-Literal     = DString
-            | SString;
-DString     = '"' ( NoDQuote )* '"';
-SString     = "'" ( NoSQuote )* "'";
-NoDQuote    = print
-            - '"';
-NoSQuote    = print
-            - "'";
-Whitespace  = ( blank )+;
-EmptyLine   = ( "#" ( print )* )? newline;
+syntax        = opt_space ( definition opt_space )*;
+definition    = identifier opt_space "=" opt_space expression opt_space ";";
+             
+expression    = choice;
+choice        = ( "|" opt_space )? sequence ( opt_space "|" opt_space sequence )*;
+sequence      = item ( req_space item )*;
+item          = zero_or_more
+              | zero_or_one
+              | one_or_more
+              | and_predicate
+              | not_predicate
+              | term;
+zero_or_more  = term opt_space "*";
+zero_or_one   = term opt_space "?";
+one_or_more   = term opt_space "+";
+and_predicate = "&" opt_space term;
+not_predicate = "!" opt_space term;
+term          = paren | atom;
+paren         = "(" opt_space expression opt_space ")";
+
+atom          = identifier
+              | keyword
+              | literal;
+identifier    = ( LOWER )+ ( "_" ( LOWER )+ )*;
+keyword       = ( UPPER )+;
+literal       = d_string
+              | s_string;
+d_string      = '"' ( no_d_quote )* '"';
+s_string      = "'" ( no_s_quote )* "'";
+no_d_quote    = !( '"' ) PRINT;
+no_s_quote    = !( "'" ) PRINT;
+             
+opt_space     = ( space )*;
+req_space     = ( space )+;
+space         = "#" ( PRINT )* NEWLINE
+              | BLANK
+              | NEWLINE;
