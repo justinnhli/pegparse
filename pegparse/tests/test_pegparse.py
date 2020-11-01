@@ -6,7 +6,7 @@ from os.path import dirname, realpath
 
 sys.path.insert(0, dirname(dirname(realpath(__file__))))
 
-from pegparse import EBNF_GRAMMAR, EBNF_DEFS, ASTNode, EBNFWalker
+from pegparse import PEG_GRAMMAR, PEG_DEFS, ASTNode, PEGWalker
 from pegparse import create_parser
 
 
@@ -62,26 +62,26 @@ def test_descendants():
     )
 
 
-def test_ebnf_walker():
-    with open(EBNF_GRAMMAR) as fd:
+def test_peg_walker():
+    with open(PEG_GRAMMAR) as fd:
         text = fd.read()
-    ast = EBNFWalker().parse(text)
-    assert isinstance(ast, dict), 'EBNFWalker failed to return a dict'
+    ast = PEGWalker().parse(text)
+    assert isinstance(ast, dict), 'PEGWalker failed to return a dict'
 
 
-def test_ebnf_representation():
-    with open(EBNF_GRAMMAR) as fd:
+def test_peg_representation():
+    with open(PEG_GRAMMAR) as fd:
         text = fd.read()
-    defs = EBNFWalker().parse(text)
-    assert defs == EBNF_DEFS, 'Parsed EBNF defs do not match internal defs'
+    defs = PEGWalker().parse(text)
+    assert defs == PEG_DEFS, 'Parsed PEG defs do not match internal defs'
 
 
 def test_trace():
-    with open(EBNF_GRAMMAR) as fd:
+    with open(PEG_GRAMMAR) as fd:
         line = fd.readline().strip()
     line = line[:-1] + ' ' + line[-1]
     try:
-        walker = EBNFWalker()
+        walker = PEGWalker()
         walker.debug = True
         walker.parse(line)
         assert False
@@ -94,8 +94,8 @@ def test_trace():
 
 def main():
     test_descendants()
-    test_ebnf_walker()
-    test_ebnf_representation()
+    test_peg_walker()
+    test_peg_representation()
     test_trace()
 
 

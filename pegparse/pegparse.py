@@ -7,10 +7,10 @@ from collections import namedtuple
 from os.path import dirname, join as join_path
 from textwrap import indent
 
-EBNF_GRAMMAR = join_path(dirname(__file__), 'ebnf.ebnf')
+PEG_GRAMMAR = join_path(dirname(__file__), 'peg.peg')
 
 # pylint: disable=line-too-long
-EBNF_DEFS = {
+PEG_DEFS = {
     'Syntax': ('CONJUNCT', ('ONEORMORE', ('CONJUNCT', ('ZEROORMORE', ('CONJUNCT', 'EmptyLine')), 'Definition', 'newline')), ('ZEROORMORE', ('CONJUNCT', 'EmptyLine'))),
     'Definition': ('CONJUNCT', 'Identifier', 'Whitespace', '"= "', 'Expression', '";"'),
     'Expression': ('DISJUNCT', 'Disjunct', 'Except', 'Conjunct'),
@@ -36,31 +36,31 @@ EBNF_DEFS = {
 
 
 def create_parser_from_file(filepath, debug=False):
-    """Create parser from a EBNF grammar file.
+    """Create parser from a PEG grammar file.
 
     Arguments:
-        filepath (str): Path to EBNF file.
+        filepath (str): Path to PEG file.
         debug (bool): Print debugging information. Defaults to False.
 
     Returns:
         PEGParser: A parser for the grammar.
     """
     with open(filepath) as fd:
-        ebnf = fd.read()
-    return create_parser(ebnf, debug=debug)
+        peg = fd.read()
+    return create_parser(peg, debug=debug)
 
 
-def create_parser(ebnf, debug=False):
-    """Create parser from a EBNF grammar.
+def create_parser(peg, debug=False):
+    """Create parser from a PEG grammar.
 
     Arguments:
-        ebnf (str): A EBNF grammar.
+        peg (str): A PEG grammar.
         debug (bool): Print debugging information. Defaults to False.
 
     Returns:
         PEGParser: A parser for the grammar.
     """
-    return PEGParser(EBNFWalker().parse(ebnf), debug=debug)
+    return PEGParser(PEGWalker().parse(peg), debug=debug)
 
 
 def one_line_format(string):
@@ -246,7 +246,7 @@ class PEGParser:
 
         Arguments:
             syntax (dict[str]): Dictionary of term definitions. This is usually
-                produced by an EBNFWalker instance.
+                produced by an PEGWalker instance.
             debug (bool): Whether to print parsing information.
                 Defaults to False.
         """
@@ -777,13 +777,13 @@ class ASTWalker:
         )
 
 
-class EBNFWalker(ASTWalker):
+class PEGWalker(ASTWalker):
     # pylint: disable=invalid-name,no-self-use,unused-argument
-    """A traversal of the EBNF grammar to build up term definitions."""
+    """A traversal of the PEG grammar to build up term definitions."""
 
     def __init__(self):
         """Initialize the traversal."""
-        super().__init__(PEGParser(EBNF_DEFS), 'Syntax')
+        super().__init__(PEGParser(PEG_DEFS), 'Syntax')
 
     def flatten(self, ast, results):
         """Convert results into a tuple.
@@ -912,7 +912,7 @@ def main():
     from fileinput import input as fileinput
     arg_parser = ArgumentParser()
     arg_parser.add_argument('-e', dest='expression', help='starting expression; if omitted, first defined term is used')
-    arg_parser.add_argument('-g', dest='grammar', default=EBNF_GRAMMAR, help='EBNF grammar file')
+    arg_parser.add_argument('-g', dest='grammar', default=PEG_GRAMMAR, help='PEG grammar file')
     arg_parser.add_argument('-v', dest='verbose', action='store_true', help='show what the parser is doing')
     arg_parser.add_argument('file', default='-', nargs='?', help='text file to be parsed')
     args = arg_parser.parse_args()
@@ -922,7 +922,7 @@ def main():
         grammar = ''
         with open(args.grammar, 'r') as fd:
             grammar = fd.read()
-        term = PEGParser(EBNF_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
+        term = PEGParser(PEG_DEFS).parse(grammar, 'Syntax').first_descendant('Definition/Identifier').match
     contents = ''.join(fileinput(files=args.file))
     parser = create_parser_from_file(args.grammar, debug=args.verbose)
     parser.parse(contents, term).pretty_print()
