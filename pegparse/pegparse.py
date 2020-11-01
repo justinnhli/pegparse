@@ -310,6 +310,12 @@ class PEGParser:
         return ast, parsed
 
     def _add_trace(self, term, position):
+        """Log the parse for error messages.
+
+        Parameters:
+            term (str): The term to parse as.
+            position (int): The position from which to parse.
+        """
         trace_item = TraceItem(self.depth, term, position)
         self.trace.append(trace_item)
         if len(self.trace) == 1:
@@ -821,6 +827,15 @@ class PEGWalker(ASTWalker):
         return {result[0]: result[1] for result in results}
 
     def _parse_definition(self, ast, results):
+        """Parse a Definition node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            dict[str]: Dictionary of term definitions.
+        """
         return results
 
     def _parse_choice(self, ast, results):
@@ -839,24 +854,78 @@ class PEGWalker(ASTWalker):
             return ('CHOICE', *results)
 
     def _parse_sequence(self, ast, results):
+        """Parse a Sequence node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            tuple[str]: A choice definition.
+        """
         if len(results) == 1:
             return results[0]
         else:
             return ('SEQUENCE', *results)
 
     def _parse_zero_or_more(self, ast, results):
+        """Parse a zero-or-more predicate node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            tuple[str]: A repetition definition.
+        """
         return ('ZERO_OR_MORE', *results)
 
     def _parse_zero_or_one(self, ast, results):
+        """Parse a zero-or-one predicate node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            tuple[str]: A repetition definition.
+        """
         return ('ZERO_OR_ONE', *results)
 
     def _parse_one_or_more(self, ast, results):
+        """Parse a one-or-more predicate node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            tuple[str]: A repetition definition.
+        """
         return ('ONE_OR_MORE', *results)
 
     def _parse_and_predicate(self, ast, results):
+        """Parse an And predicate node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            tuple[str]: A predicate definition.
+        """
         return ('AND', *results)
 
     def _parse_not_predicate(self, ast, results):
+        """Parse an Not predicate node.
+
+        Parameters:
+            ast (ASTNode): The AST term to head the tuple.
+            results (list[any]): The results from descendants.
+
+        Returns:
+            tuple[str]: A predicate definition.
+        """
         return ('NOT', *results)
 
     def _parse_identifier(self, ast, results):
