@@ -570,7 +570,7 @@ class PEGParser:
             ASTNode: The root node of this abstract syntax sub-tree.
             int: The index of the last character parsed.
         """
-        if string[position:].find(term[1:-1]) == 0:
+        if string[position:].startswith(term[1:-1]):
             ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
             return self._cache_and_return(term, position, ast)
         return self._fail(term, position)
