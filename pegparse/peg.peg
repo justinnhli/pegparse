@@ -22,17 +22,15 @@ paren         = "(" opt_space expression opt_space ")";
 
 # atoms
 atom          = identifier
-              | keyword
+              | builtin
               | literal;
 identifier    = ( LOWER )+ ( "_" ( LOWER )+ )*;
-keyword       = ( UPPER )+;
+builtin       = ( UPPER )+;
 literal       = d_string
               | s_string;
-d_string      = '"' ( no_d_quote )* '"';
-s_string      = "'" ( no_s_quote )* "'";
-no_d_quote    = !( '"' ) PRINT;
-no_s_quote    = !( "'" ) PRINT;
-             
+d_string      = '"' ( !( '"' ) PRINT )* '"';
+s_string      = "'" ( !( "'" ) PRINT )* "'";
+
 # whitespace
 opt_space     = ( space )*;
 req_space     = ( space )+;

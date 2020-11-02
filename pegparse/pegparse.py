@@ -25,14 +25,12 @@ PEG_DEFS = {
     'not_predicate': ('SEQUENCE', '"!"', 'opt_space', 'term'),
     'term': ('CHOICE', 'paren', 'atom'),
     'paren': ('SEQUENCE', '"("', 'opt_space', 'expression', 'opt_space', '")"'),
-    'atom': ('CHOICE', 'identifier', 'keyword', 'literal'),
+    'atom': ('CHOICE', 'identifier', 'builtin', 'literal'),
     'identifier': ('SEQUENCE', ('ONE_OR_MORE', 'LOWER'), ('ZERO_OR_MORE', ('SEQUENCE', '"_"', ('ONE_OR_MORE', 'LOWER')))),
-    'keyword': ('ONE_OR_MORE', 'UPPER'),
+    'builtin': ('ONE_OR_MORE', 'UPPER'),
     'literal': ('CHOICE', 'd_string', 's_string'),
-    'd_string': ('SEQUENCE', '\'"\'', ('ZERO_OR_MORE', 'no_d_quote'), '\'"\''),
-    's_string': ('SEQUENCE', '"\'"', ('ZERO_OR_MORE', 'no_s_quote'), '"\'"'),
-    'no_d_quote': ('SEQUENCE', ('NOT', '\'"\''), 'PRINT'),
-    'no_s_quote': ('SEQUENCE', ('NOT', '"\'"'), 'PRINT'),
+    'd_string': ('SEQUENCE', '\'"\'', ('ZERO_OR_MORE', ('SEQUENCE', ('NOT', '\'"\''), 'PRINT')), '\'"\''),
+    's_string': ('SEQUENCE', '"\'"', ('ZERO_OR_MORE', ('SEQUENCE', ('NOT', '"\'"'), 'PRINT')), '"\'"'),
     'opt_space': ('ZERO_OR_MORE', 'space'),
     'req_space': ('ONE_OR_MORE', 'space'),
     'space': ('CHOICE', ('SEQUENCE', '"#"', ('ZERO_OR_MORE', 'PRINT'), 'NEWLINE'), 'BLANK', 'NEWLINE'),
@@ -948,7 +946,7 @@ class PEGWalker(ASTWalker):
         """
         return ast.match
 
-    def _parse_keyword(self, ast, results):
+    def _parse_builtin(self, ast, results):
         """Parse a Reserved node.
 
         Parameters:
@@ -956,7 +954,7 @@ class PEGWalker(ASTWalker):
             results (list[any]): The results from descendants.
 
         Returns:
-            str: A keyword (core term).
+            str: A builtin (core term).
         """
         return ast.match
 
