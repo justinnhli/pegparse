@@ -23,19 +23,19 @@ def test_descendants():
     # setup
     parser = create_parser(dedent('''
         expression = operand ( operator operand )*;
-        operand = paren_expression
-                | number;
-        paren_expression = "(" expression ")";
-        operator = "+"
-                 | "-"
-                 | "*"
-                 | "/";
-        number = ( DIGIT )+;
+        operand    = paren
+                   | number;
+        paren      = "(" expression ")";
+        number     = ( DIGIT )+;
+        operator   = "+"
+                   | "-"
+                   | "*"
+                   | "/";
     '''.lstrip('\n').rstrip(' ')))
     ast = parser.parse('(1+(2*3))-5', 'expression')
     message_stem = 'descendants() docstring is incorrect'
     # tests
-    path = 'operand/paren_expression/expression/operand'
+    path = 'operand/paren/expression/operand'
     matches = [node.match for node in ast.descendants(path)]
     assert_equal(['1', '(2*3)'], matches, message_stem)
     descendants = ast.descendants('operand')
@@ -56,7 +56,7 @@ def test_descendants():
         message_stem
     )
     assert_equal(
-        ['paren_expression', 'number'],
+        ['paren', 'number'],
         [node.term for node in descendants],
         message_stem
     )
