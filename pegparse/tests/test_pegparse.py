@@ -73,7 +73,22 @@ def test_peg_representation():
     with open(PEG_GRAMMAR) as fd:
         text = fd.read()
     defs = PEGWalker().parse(text)
-    assert defs == PEG_DEFS, 'Parsed PEG defs do not match internal defs'
+    if defs != PEG_DEFS:
+        lines = []
+        # check keys
+        if set(defs.keys()) != set(PEG_DEFS.keys()):
+            diff1 = set(defs.keys()) - set(PEG_DEFS.keys())
+            lines.append(f'  new parse has extra keys: {sorted(diff1)}')
+            diff2 = set(PEG_DEFS.keys()) - set(defs.keys())
+            lines.append(f'  old parse has extra keys: {sorted(diff2)}')
+        # check values
+        for key in sorted(defs.keys()):
+            if defs[key] != PEG_DEFS[key]:
+                lines.append(f'  new parse for key "{key}":')
+                lines.append(f'    {defs[key]}')
+                lines.append(f'  old parse for key "{key}":')
+                lines.append(f'    {PEG_DEFS[key]}')
+        assert defs == PEG_DEFS, 'Parsed PEG defs do not match internal defs\n' + '\n'.join(lines)
 
 
 def test_trace():
