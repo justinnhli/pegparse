@@ -12,28 +12,28 @@ PEG_GRAMMAR = Path(__file__).parent / 'peg.peg'
 
 # pylint: disable=line-too-long
 PEG_DEFS = {
-    'syntax': ('SEQUENCE', 'opt_space', ('ZERO_OR_MORE', ('SEQUENCE', 'definition', 'opt_space'))),
-    'definition': ('SEQUENCE', 'identifier', 'opt_space', '"="', 'opt_space', 'expression', 'opt_space', '";"'),
-    'expression': 'choice',
-    'choice': ('SEQUENCE', ('ZERO_OR_ONE', ('SEQUENCE', '"|"', 'opt_space')), 'sequence', ('ZERO_OR_MORE', ('SEQUENCE', 'opt_space', '"|"', 'opt_space', 'sequence'))),
-    'sequence': ('SEQUENCE', 'item', ('ZERO_OR_MORE', ('SEQUENCE', 'req_space', 'item'))),
-    'item': ('CHOICE', 'zero_or_more', 'zero_or_one', 'one_or_more', 'and_predicate', 'not_predicate', 'term'),
-    'zero_or_more': ('SEQUENCE', 'term', 'opt_space', '"*"'),
-    'zero_or_one': ('SEQUENCE', 'term', 'opt_space', '"?"'),
-    'one_or_more': ('SEQUENCE', 'term', 'opt_space', '"+"'),
-    'and_predicate': ('SEQUENCE', '"&"', 'opt_space', 'term'),
-    'not_predicate': ('SEQUENCE', '"!"', 'opt_space', 'term'),
-    'term': ('CHOICE', 'paren', 'atom'),
-    'paren': ('SEQUENCE', '"("', 'opt_space', 'expression', 'opt_space', '")"'),
-    'atom': ('CHOICE', 'identifier', 'builtin', 'literal'),
-    'identifier': ('SEQUENCE', ('ONE_OR_MORE', 'LOWER'), ('ZERO_OR_MORE', ('SEQUENCE', '"_"', ('ONE_OR_MORE', 'LOWER')))),
-    'builtin': ('ONE_OR_MORE', 'UPPER'),
-    'literal': ('CHOICE', 'd_string', 's_string'),
-    'd_string': ('SEQUENCE', '\'"\'', ('ZERO_OR_MORE', ('SEQUENCE', ('NOT', '\'"\''), 'PRINT')), '\'"\''),
-    's_string': ('SEQUENCE', '"\'"', ('ZERO_OR_MORE', ('SEQUENCE', ('NOT', '"\'"'), 'PRINT')), '"\'"'),
-    'opt_space': ('ZERO_OR_MORE', 'space'),
-    'req_space': ('ONE_OR_MORE', 'space'),
-    'space': ('CHOICE', ('SEQUENCE', '"#"', ('ZERO_OR_MORE', 'PRINT'), 'NEWLINE'), 'BLANK', 'NEWLINE'),
+    'syntax': ('CHOICE', ('SEQUENCE', 'opt_space', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', 'definition', 'opt_space'))))),
+    'definition': ('CHOICE', ('SEQUENCE', 'identifier', 'opt_space', '"="', 'opt_space', 'expression', 'opt_space', '";"')),
+    'expression': ('CHOICE', ('SEQUENCE', 'choice')),
+    'choice': ('CHOICE', ('SEQUENCE', ('ZERO_OR_ONE', ('CHOICE', ('SEQUENCE', '"|"', 'opt_space'))), 'sequence', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', 'opt_space', '"|"', 'opt_space', 'sequence'))))),
+    'sequence': ('CHOICE', ('SEQUENCE', 'item', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', 'req_space', 'item'))))),
+    'item': ('CHOICE', ('SEQUENCE', 'zero_or_more'), ('SEQUENCE', 'zero_or_one'), ('SEQUENCE', 'one_or_more'), ('SEQUENCE', 'and_predicate'), ('SEQUENCE', 'not_predicate'), ('SEQUENCE', 'term')),
+    'zero_or_more': ('CHOICE', ('SEQUENCE', 'term', 'opt_space', '"*"')),
+    'zero_or_one': ('CHOICE', ('SEQUENCE', 'term', 'opt_space', '"?"')),
+    'one_or_more': ('CHOICE', ('SEQUENCE', 'term', 'opt_space', '"+"')),
+    'and_predicate': ('CHOICE', ('SEQUENCE', '"&"', 'opt_space', 'term')),
+    'not_predicate': ('CHOICE', ('SEQUENCE', '"!"', 'opt_space', 'term')),
+    'term': ('CHOICE', ('SEQUENCE', 'paren'), ('SEQUENCE', 'atom')),
+    'paren': ('CHOICE', ('SEQUENCE', '"("', 'opt_space', 'expression', 'opt_space', '")"')),
+    'atom': ('CHOICE', ('SEQUENCE', 'identifier'), ('SEQUENCE', 'builtin'), ('SEQUENCE', 'literal')),
+    'identifier': ('CHOICE', ('SEQUENCE', ('ONE_OR_MORE', ('CHOICE', ('SEQUENCE', 'LOWER'))), ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', '"_"', ('ONE_OR_MORE', ('CHOICE', ('SEQUENCE', 'LOWER')))))))),
+    'builtin': ('CHOICE', ('SEQUENCE', ('ONE_OR_MORE', ('CHOICE', ('SEQUENCE', 'UPPER'))))),
+    'literal': ('CHOICE', ('SEQUENCE', 'd_string'), ('SEQUENCE', 's_string')),
+    'd_string': ('CHOICE', ('SEQUENCE', '\'"\'', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', ('NOT', ('CHOICE', ('SEQUENCE', '\'"\''))), 'PRINT'))), '\'"\'')),
+    's_string': ('CHOICE', ('SEQUENCE', '"\'"', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', ('NOT', ('CHOICE', ('SEQUENCE', '"\'"'))), 'PRINT'))), '"\'"')),
+    'opt_space': ('CHOICE', ('SEQUENCE', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', 'space'))))),
+    'req_space': ('CHOICE', ('SEQUENCE', ('ONE_OR_MORE', ('CHOICE', ('SEQUENCE', 'space'))))),
+    'space': ('CHOICE', ('SEQUENCE', '"#"', ('ZERO_OR_MORE', ('CHOICE', ('SEQUENCE', 'PRINT'))), 'NEWLINE'), ('SEQUENCE', 'BLANK'), ('SEQUENCE', 'NEWLINE')),
 }
 
 
@@ -423,11 +423,10 @@ class PEGParser:
         """
         children = []
         pos = position
-        repetitions = ('ZERO_OR_ONE', 'ZERO_OR_MORE', 'ONE_OR_MORE')
         for term in terms[1:]:
             child_ast, child_pos = self._match(string, term, pos)
             if child_ast:
-                if isinstance(term, tuple) and (term[0] in repetitions):
+                if isinstance(term, tuple):
                     children.extend(child_ast.children)
                 else:
                     children.append(child_ast)
@@ -559,10 +558,7 @@ class PEGParser:
         self.depth -= 1
         if not ast:
             return self._fail(term, position)
-        if isinstance(expression, tuple) and expression[0] != 'CHOICE':
-            ast.term = term
-        else:
-            ast = ASTNode(term, [ast], string, position, position + len(ast.match))
+        ast.term = term
         return self._cache_and_return(term, position, ast)
 
     def _match_core(self, string, term, position):
@@ -860,10 +856,7 @@ class PEGWalker(ASTWalker):
         Returns:
             tuple[str]: A choice definition.
         """
-        if len(results) == 1:
-            return results[0]
-        else:
-            return ('CHOICE', *results)
+        return ('CHOICE', *results)
 
     def _parse_sequence(self, ast, results):
         """Parse a Sequence node.
@@ -875,10 +868,7 @@ class PEGWalker(ASTWalker):
         Returns:
             tuple[str]: A choice definition.
         """
-        if len(results) == 1:
-            return results[0]
-        else:
-            return ('SEQUENCE', *results)
+        return ('SEQUENCE', *results)
 
     def _parse_zero_or_more(self, ast, results):
         """Parse a zero-or-more predicate node.

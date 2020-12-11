@@ -10,7 +10,7 @@ from pegparse import PEG_GRAMMAR, PEG_DEFS, ASTNode, PEGWalker
 from pegparse import create_parser
 
 
-def assert_equal(actual, expected, message_stem):
+def assert_equal(expected, actual, message_stem):
     message = '\n'.join([
         message_stem,
         'expected: ' + str(expected),
@@ -19,8 +19,17 @@ def assert_equal(actual, expected, message_stem):
     assert actual == expected, message
 
 
-def test_descendants():
-    # setup
+def test_ast_structure():
+
+    def _test_descendants(string, term, path, expected):
+        ast = parser.parse(string, term)
+        actual = [node.match for node in ast.descendants(path)]
+        assert_equal(
+            expected,
+            actual,
+            f'expected {path} descendants of "{string}"to be {expected} but got {actual}',
+        )
+
     parser = create_parser(dedent('''
         expression = operand ( operator operand )*;
         operand    = paren
@@ -31,35 +40,32 @@ def test_descendants():
                    | "-"
                    | "*"
                    | "/";
-    '''.lstrip('\n').rstrip(' ')))
-    ast = parser.parse('(1+(2*3))-5', 'expression')
-    message_stem = 'descendants() docstring is incorrect'
-    # tests
-    path = 'operand/paren/expression/operand'
-    matches = [node.match for node in ast.descendants(path)]
-    assert_equal(['1', '(2*3)'], matches, message_stem)
-    descendants = ast.descendants('operand')
-    assert_equal(
-        ['(1+(2*3))', '5'],
-        [node.match for node in descendants],
-        message_stem
-    )
-    assert_equal(
-        ['operand', 'operand'],
-        [node.term for node in descendants],
-        message_stem
-    )
-    descendants = ast.descendants('operand/*')
-    assert_equal(
-        ['(1+(2*3))', '5'],
-        [node.match for node in descendants],
-        message_stem
-    )
-    assert_equal(
-        ['paren', 'number'],
-        [node.term for node in descendants],
-        message_stem
-    )
+    '''))
+    _test_descendants('1', 'operand', 'number', ['1'])
+    _test_descendants('(1)', 'operand', 'paren/expression', ['1'])
+    _test_descendants('(1+(2*3))-5', 'expression', 'operand', ['(1+(2*3))', '5'])
+    _test_descendants('(1+(2*3))-5', 'expression', 'operand/*', ['(1+(2*3))', '5'])
+    _test_descendants('(1+(2*3))-5', 'expression', 'operand/paren/expression/operand', ['1', '(2*3)'])
+
+    parser = create_parser(dedent('''
+        a = b;
+        b = ( c )*;
+        c = "!";
+    '''))
+    _test_descendants('!!!', 'a', 'b/c', ['!', '!', '!'])
+
+    parser = create_parser(dedent('''
+        a = ( b c | ( d | e ) ) f ;
+        b = "b";
+        c = "c";
+        d = "d";
+        e = "e";
+        f = "f";
+    '''))
+    _test_descendants('df', 'a', '*', ['d', 'f'])
+    _test_descendants('bcf', 'a', '*', ['b', 'c', 'f'])
+    _test_descendants('ef', 'a', '*', ['e', 'f'])
+
 
 
 def test_peg_walker():
@@ -127,7 +133,7 @@ def test_anbncn():
 
 
 def main():
-    test_descendants()
+    test_ast_structure()
     test_peg_walker()
     test_peg_representation()
     test_trace()
