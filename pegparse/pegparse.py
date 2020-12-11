@@ -614,7 +614,7 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         self.cache[(term, position)] = ast
-        return self._get_cached(term, position)
+        return ast
 
     def _get_cached(self, term, position):
         """Retrieve a parse from cache, if it exists.
