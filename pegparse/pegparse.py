@@ -391,8 +391,8 @@ class PEGParser:
                 return self._match_literal(string, term, position)
             else:
                 raise NameError('Unknown terminal {}'.format(term))
-        self._debug_print('unknown non-terminal: {}'.format(term))
-        return self._fail(term, position)
+        raise NameError('Unknown meta-terminal {}'.format(term))
+        return None
 
     def _match_choice(self, string, terms, position):
         """Parse the disjunction of/any of multiple terms.
@@ -410,7 +410,7 @@ class PEGParser:
             ast = self._match(string, term, position)
             if ast:
                 return ast
-        return self._fail(terms, position)
+        return None
 
     def _match_sequence(self, string, terms, position):
         """Parse the concatenation of multiple terms.
@@ -435,7 +435,7 @@ class PEGParser:
                     children.append(child_ast)
                 pos = child_ast.end_pos
             else:
-                return self._fail(terms, position)
+                return None
         return ASTNode('SEQUENCE', children, string, position, pos)
 
     def _match_zero_or_more(self, string, terms, position):
@@ -493,7 +493,7 @@ class PEGParser:
         terms = terms[1]
         ast = self._match(string, terms, position)
         if not ast:
-            return self._fail(terms, position)
+            return None
         last_pos = ast.end_pos
         children = ast.children
         ast = self._match(string, terms, last_pos)
@@ -518,7 +518,7 @@ class PEGParser:
         """
         ast = self._match(string, terms[1], position)
         if not ast:
-            return self._fail(terms[1], position)
+            return None
         return self._match(string, 'EMPTY', position)
 
     def _match_not(self, string, terms, position):
@@ -536,7 +536,7 @@ class PEGParser:
         """
         ast = self._match(string, terms[1], position)
         if ast:
-            return self._fail(terms[1], position)
+            return None
         return self._match(string, 'EMPTY', position)
 
     def _match_custom(self, string, term, position):
@@ -559,10 +559,12 @@ class PEGParser:
         self.depth += 1
         ast = self._match(string, expression, position)
         self.depth -= 1
-        if not ast:
-            return self._fail(term, position)
-        ast.term = term
-        return self._cache_and_return(term, position, ast)
+        if ast:
+            ast.term = term
+            return self._cache_and_return(term, position, ast)
+        else:
+            self._debug_print('failed to match {} at position {}'.format(term, position))
+            return self._cache_and_return(term, position, None)
 
     def _match_core(self, string, term, position):
         """Parse a core syntax definition.
@@ -580,7 +582,7 @@ class PEGParser:
         if match:
             ast = ASTNode(term, [], string, position, position + len(match.group(0)))
             return self._cache_and_return(term, position, ast)
-        return self._fail(term, position)
+        return self._cache_and_return(term, position, None)
 
     def _match_literal(self, string, term, position):
         """Parse a literal.
@@ -597,22 +599,7 @@ class PEGParser:
         if string[position:].startswith(term[1:-1]):
             ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
             return self._cache_and_return(term, position, ast)
-        return self._fail(term, position)
-
-    def _fail(self, term, position):
-        """Fail a parse to allow backtracking.
-
-        Parameters:
-            term (str): The literal to parse the string as.
-            position (int): The position which with to start the parse.
-
-        Returns:
-            None: The absence of an ASTNode.
-            int: The index of the last character parsed.
-        """
-        if term in self.custom_defs:
-            self._debug_print('failed to match {} at position {}'.format(term, position))
-        return None
+        return self._cache_and_return(term, position, None)
 
     def _cache_and_return(self, term, position, ast):
         """Cache a successful parse and return the result.
