@@ -303,8 +303,11 @@ class PEGParser:
         self.depth = 0
         self.trace = []
         self.max_trace_index = 0
-        ast, parsed = self._match(string, term, 0)
-        return ast, parsed
+        ast = self._match(string, term, 0)
+        if ast:
+            return ast, ast.end_pos
+        else:
+            return None, 0
 
     def _add_trace(self, term, position):
         """Log the parse for error messages.
@@ -377,9 +380,9 @@ class PEGParser:
         if isinstance(term, tuple) and hasattr(self, '_match_{}'.format(term[0].lower())):
             return getattr(self, '_match_{}'.format(term[0].lower()))(string, term, position)
         elif isinstance(term, str):
-            ast, pos = self._get_cached(term, position)
+            ast = self._get_cached(term, position)
             if ast:
-                return ast, pos
+                return ast
             elif term in self.custom_defs:
                 return self._match_custom(string, term, position)
             elif term in PEGParser.CORE_DEFS:
@@ -404,10 +407,10 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         for term in terms[1:]:
-            ast, pos = self._match(string, term, position)
+            ast = self._match(string, term, position)
             if ast:
-                return ast, pos
-        return None, position
+                return ast
+        return self._fail(terms, position)
 
     def _match_sequence(self, string, terms, position):
         """Parse the concatenation of multiple terms.
@@ -424,16 +427,16 @@ class PEGParser:
         children = []
         pos = position
         for term in terms[1:]:
-            child_ast, child_pos = self._match(string, term, pos)
+            child_ast = self._match(string, term, pos)
             if child_ast:
                 if isinstance(term, tuple):
                     children.extend(child_ast.children)
                 else:
                     children.append(child_ast)
-                pos = child_pos
+                pos = child_ast.end_pos
             else:
-                return None, child_pos
-        return ASTNode('SEQUENCE', children, string, position, pos), pos
+                return self._fail(terms, position)
+        return ASTNode('SEQUENCE', children, string, position, pos)
 
     def _match_zero_or_more(self, string, terms, position):
         """Parse zero-or-more of a term (the * operator).
@@ -448,14 +451,14 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         terms = terms[1]
-        children = []
         last_pos = position
-        ast, pos = self._match(string, terms, position)
+        children = []
+        ast = self._match(string, terms, last_pos)
         while ast:
+            last_pos = ast.end_pos
             children.extend(ast.children)
-            last_pos = pos
-            ast, pos = self._match(string, terms, pos)
-        return ASTNode('ZERO_OR_MORE', children, string, position, last_pos), last_pos
+            ast = self._match(string, terms, last_pos)
+        return ASTNode('ZERO_OR_MORE', children, string, position, last_pos)
 
     def _match_zero_or_one(self, string, terms, position):
         """Parse zero-or-one of a term (the ? operator).
@@ -470,9 +473,9 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         terms = terms[1]
-        ast, pos = self._match(string, terms, position)
+        ast = self._match(string, terms, position)
         if ast:
-            return ast, pos
+            return ast
         return self._match(string, 'EMPTY', position)
 
     def _match_one_or_more(self, string, terms, position):
@@ -488,17 +491,17 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         terms = terms[1]
-        ast, pos = self._match(string, terms, position)
+        ast = self._match(string, terms, position)
         if not ast:
-            return ast, pos
+            return self._fail(terms, position)
+        last_pos = ast.end_pos
         children = ast.children
-        last_pos = pos
-        ast, pos = self._match(string, terms, pos)
+        ast = self._match(string, terms, last_pos)
         while ast:
+            last_pos = ast.end_pos
             children.extend(ast.children)
-            last_pos = pos
-            ast, pos = self._match(string, terms, pos)
-        return ASTNode('ONE_OR_MORE', children, string, position, last_pos), last_pos
+            ast = self._match(string, terms, last_pos)
+        return ASTNode('ONE_OR_MORE', children, string, position, last_pos)
 
     def _match_and(self, string, terms, position):
         """Parse the negation of a term.
@@ -513,7 +516,7 @@ class PEGParser:
             ASTNode: The root node of this abstract syntax sub-tree.
             int: The index of the last character parsed.
         """
-        ast, _ = self._match(string, terms[1], position)
+        ast = self._match(string, terms[1], position)
         if not ast:
             return self._fail(terms[1], position)
         return self._match(string, 'EMPTY', position)
@@ -531,7 +534,7 @@ class PEGParser:
             ASTNode: The root node of this abstract syntax sub-tree.
             int: The index of the last character parsed.
         """
-        ast, _ = self._match(string, terms[1], position)
+        ast = self._match(string, terms[1], position)
         if ast:
             return self._fail(terms[1], position)
         return self._match(string, 'EMPTY', position)
@@ -554,7 +557,7 @@ class PEGParser:
         ))
         self._add_trace(term, position)
         self.depth += 1
-        ast, _ = self._match(string, expression, position)
+        ast = self._match(string, expression, position)
         self.depth -= 1
         if not ast:
             return self._fail(term, position)
@@ -609,7 +612,7 @@ class PEGParser:
         """
         if term in self.custom_defs:
             self._debug_print('failed to match {} at position {}'.format(term, position))
-        return None, position
+        return None
 
     def _cache_and_return(self, term, position, ast):
         """Cache a successful parse and return the result.
@@ -641,8 +644,8 @@ class PEGParser:
             if term in self.custom_defs:
                 self._debug_print('matched {} at position {}'.format(term, position))
             ast = self.cache[(term, position)]
-            return ast, position + len(ast.match)
-        return None, position
+            return ast
+        return None
 
     def _debug_print(self, message):
         """Print debugging information with indentation.
@@ -771,8 +774,8 @@ class ASTWalker:
         """
         if term is None:
             term = self.root_term
-        ast, parsed = self.parser.parse_partial(text, term)
-        return self.parse_ast(ast), parsed
+        ast = self.parser.parse_partial(text, term)
+        return self.parse_ast(ast), ast.end_pos
 
     def parse_ast(self, ast):
         """Parse an AST.
