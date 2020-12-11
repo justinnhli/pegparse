@@ -685,13 +685,15 @@ class ASTWalker:
         """
         self.parser = parser
         self.root_term = root_term
-        self._terms_to_expand = set(
+        self._dispatch_terms = set(
             term[len(self.PARSE_FUNCTION_PREFIX):] for term in dir(self)
             if term.startswith(self.PARSE_FUNCTION_PREFIX)
         )
-        noskips = list(self._terms_to_expand)
+        self._terms_to_expand = set()
+        noskips = list(self._dispatch_terms)
         while noskips:
             noskip = noskips.pop()
+            self._terms_to_expand.add(noskip)
             for term, definition in self.parser.custom_defs.items():
                 if term in self._terms_to_expand:
                     continue
@@ -725,7 +727,7 @@ class ASTWalker:
         if hasattr(self, function):
             return getattr(self, function)(ast, tuple(results)), True
         elif results:
-            return tuple(results), False
+            return results, False
         else:
             return ASTWalker.EmptySentinel(), False
 
@@ -787,8 +789,11 @@ class ASTWalker:
         """
         if ast is None:
             return None
+        result = self._postorder_traversal(ast)[0]
+        if ast.term in self._dispatch_terms:
+            return result
         else:
-            return self._postorder_traversal(ast)[0]
+            return result[0]
 
     @staticmethod
     def term_in_definition(term, definition):
