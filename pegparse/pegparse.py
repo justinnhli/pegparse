@@ -709,6 +709,7 @@ class ASTWalker:
 
         Returns:
             any: Whatever the parse_* functions return, or an EmptySentinel.
+            bool: Whether a parse occurred.
         """
         results = []
         for child in ast.descendants('*'):
@@ -743,7 +744,7 @@ class ASTWalker:
             return self.parse(fd.read(), term)
 
     def parse(self, text, term=None):
-        """Parse a string with the traversal.
+        """Parse a complete string as the term.
 
         Parameters:
             text (str): The text to parse.
@@ -759,7 +760,7 @@ class ASTWalker:
         return self.parse_ast(ast)
 
     def parse_partial(self, text, term=None):
-        """Parse a string with the traversal.
+        """Parse as much of a string as possible as the term.
 
         Parameters:
             text (str): The text to parse.
@@ -776,7 +777,7 @@ class ASTWalker:
         return self.parse_ast(ast), parsed
 
     def parse_ast(self, ast):
-        """Parse an AST with the traversal.
+        """Parse an AST.
 
         Parameters:
             ast (ASTNode): The AST to parse.
@@ -840,7 +841,7 @@ class PEGWalker(ASTWalker):
             results (list[any]): The results from descendants.
 
         Returns:
-            dict[str]: Dictionary of term definitions.
+            tuple[str, tuple[str]]: A term definition.
         """
         return results
 
