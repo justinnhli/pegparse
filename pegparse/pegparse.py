@@ -391,7 +391,6 @@ class PEGParser:
             else:
                 raise NameError('Unknown terminal {}'.format(term))
         raise NameError('Unknown meta-terminal {}'.format(term))
-        return None
 
     def _match_choice(self, string, terms, position):
         """Parse the disjunction of/any of multiple terms.
