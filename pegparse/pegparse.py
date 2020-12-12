@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """A Pack Rat Parsing Expression Grammer parser."""
 
+# pylint: disable = too-many-lines
+
 import re
 from argparse import ArgumentParser
 from collections import namedtuple
 from fileinput import input as fileinput
 from pathlib import Path
 from textwrap import indent
+from typing import Any, Optional, Union, Literal, Tuple, List, Dict
+
+PEGAtom = str
+PEGOperator = Literal['CHOICE', 'SEQUENCE', 'ZERO_OR_MORE', 'ZERO_OR_ONE', 'ONE_OR_MORE', 'AND', 'NOT'] # pylint: disable = unsubscriptable-object
+PEGExpression = Tuple[Any, ...] # should be Union[Tuple[PEGOperator, PEGExpression, ...], PEGAtom]
+PEGRules = Dict[str, PEGExpression]
 
 PEG_GRAMMAR = Path(__file__).parent / 'peg.peg'
 
@@ -38,6 +46,7 @@ PEG_DEFS = {
 
 
 def create_parser_from_file(filepath, debug=False):
+    # type: (Path, bool) -> PEGParser
     """Create parser from a PEG grammar file.
 
     Parameters:
@@ -53,6 +62,7 @@ def create_parser_from_file(filepath, debug=False):
 
 
 def create_parser(peg, debug=False):
+    # type: (str, bool) -> PEGParser
     """Create parser from a PEG grammar.
 
     Parameters:
@@ -66,6 +76,7 @@ def create_parser(peg, debug=False):
 
 
 def one_line_format(string):
+    # type: (str) -> str
     """Escape tabs and spaces in a string.
 
     Parameters:
@@ -81,6 +92,7 @@ def one_line_format(string):
 
 
 def index_to_line_col(string, index):
+    # type: (str, int) -> Tuple[int, int]
     """Convert an index in a string to line and column number.
 
     Parameters:
@@ -107,6 +119,7 @@ class ASTNode:
     """Abstract Syntax Tree (AST) node."""
 
     def __init__(self, term, children, string, start_pos, end_pos):
+        # type: (str, List[ASTNode], str, int, int) -> None
         """Initialize the ASTNode.
 
         The string, start_pos, and end_pos arguments matches the arguments to
@@ -128,20 +141,24 @@ class ASTNode:
 
     @property
     def match(self):
+        # type: () -> str
         """Return the substring matched by this node."""
         return self.string[self.start_pos:self.end_pos]
 
     @property
     def line_num(self):
+        # type: () -> int
         """Return the starting line number of the substring matched by this node."""
         return index_to_line_col(self.string, self.start_pos)[0]
 
     @property
     def column(self):
+        # type: () -> int
         """Return the starting column of the substring matched by this node."""
         return index_to_line_col(self.string, self.start_pos)[1]
 
     def first_descendant(self, path='*'):
+        # type: (str) -> ASTNode
         """Get the first ASTNode descendant that matches the path.
 
         See the docstring for descendants() for a description of the path
@@ -169,6 +186,7 @@ class ASTNode:
         return result
 
     def descendants(self, path='*'):
+        # type: (str) -> Tuple[ASTNode, ...]
         """Get all ASTNode descendants that match the path.
 
         The path describes the term of each descendant separated by a '/'.
@@ -201,18 +219,19 @@ class ASTNode:
         Returns:
             ASTNode: All descendant ASTNodes that match the path.
         """
-        cur_gen = [self,]
+        cur_gen = [self,] # type: List[ASTNode]
         for term in path.split('/'):
             next_gen = []
             for adult in cur_gen:
                 next_gen.extend(adult.children)
             if term == '*':
-                cur_gen = tuple(next_gen)
+                cur_gen = next_gen
             else:
-                cur_gen = tuple(child for child in next_gen if child.term == term)
-        return cur_gen
+                cur_gen = [child for child in next_gen if child.term == term]
+        return tuple(cur_gen)
 
     def pretty_print(self, indent_level=0):
+        # type: (int) -> None
         """Print the ASTNode using indentation to denote ancestry."""
         print('{}{}: {}'.format(indent_level * 4 * ' ', self.term, one_line_format(self.match)))
         for child in self.children:
@@ -242,6 +261,7 @@ class PEGParser:
     }
 
     def __init__(self, syntax, debug=False):
+        # type: (PEGRules, bool) -> None
         """Initialize the Parser.
 
         Parameters:
@@ -252,12 +272,13 @@ class PEGParser:
         """
         self.custom_defs = syntax
         self.debug = debug
-        self.cache = {}
+        self.cache = {} # type: Dict[Tuple[str, int], ASTNode]
         self.depth = 0
-        self.trace = []
+        self.trace = [] # type: List[TraceItem]
         self.max_trace_index = 0
 
     def parse_file(self, filepath, term):
+        # type: (Path, str) -> ASTNode
         """Parse the contents of a file as a given term.
 
         Parameters:
@@ -271,6 +292,7 @@ class PEGParser:
             return self.parse(fd.read(), term)
 
     def parse(self, string, term):
+        # type: (str, str) -> ASTNode
         """Parse a string as a given term.
 
         Parameters:
@@ -288,6 +310,7 @@ class PEGParser:
         return ast
 
     def parse_partial(self, string, term):
+        # type: (str, str) -> Optional[ASTNode]
         """Parse a string as a given term.
 
         Parameters:
@@ -309,6 +332,7 @@ class PEGParser:
             return None
 
     def _add_trace(self, term, position):
+        # type: (str, int) -> None
         """Log the parse for error messages.
 
         Parameters:
@@ -335,6 +359,7 @@ class PEGParser:
             self.max_trace_index = len(self.trace) - 1
 
     def _fail_parse(self, string, parsed):
+        # type: (str, int) -> None
         """Fail a parse by raising SyntaxError with a trace.
 
         Parameters:
@@ -361,6 +386,7 @@ class PEGParser:
         )
 
     def _match(self, string, term, position=0):
+        # type: (str, Union[PEGExpression, str], int) -> Optional[ASTNode]
         """Dispatch the parsing to specialized functions.
 
         Parameters:
@@ -393,6 +419,7 @@ class PEGParser:
         raise NameError('Unknown meta-terminal {}'.format(term))
 
     def _match_choice(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse the disjunction of/any of multiple terms.
 
         Parameters:
@@ -411,6 +438,7 @@ class PEGParser:
         return None
 
     def _match_sequence(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse the concatenation of multiple terms.
 
         Parameters:
@@ -437,6 +465,7 @@ class PEGParser:
         return ASTNode('SEQUENCE', children, string, position, pos)
 
     def _match_zero_or_more(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse zero-or-more of a term (the * operator).
 
         Parameters:
@@ -459,6 +488,7 @@ class PEGParser:
         return ASTNode('ZERO_OR_MORE', children, string, position, last_pos)
 
     def _match_zero_or_one(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse zero-or-one of a term (the ? operator).
 
         Parameters:
@@ -477,6 +507,7 @@ class PEGParser:
         return self._match(string, 'EMPTY', position)
 
     def _match_one_or_more(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse one-or-more of a term (the + operator).
 
         Parameters:
@@ -502,6 +533,7 @@ class PEGParser:
         return ASTNode('ONE_OR_MORE', children, string, position, last_pos)
 
     def _match_and(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse the negation of a term.
 
         Parameters:
@@ -520,6 +552,7 @@ class PEGParser:
         return self._match(string, 'EMPTY', position)
 
     def _match_not(self, string, terms, position):
+        # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse the negation of a term.
 
         Parameters:
@@ -538,6 +571,7 @@ class PEGParser:
         return self._match(string, 'EMPTY', position)
 
     def _match_custom(self, string, term, position):
+        # type: (str, PEGAtom, int) -> Optional[ASTNode]
         """Dispatch a parse to the custom syntax definition.
 
         Parameters:
@@ -565,6 +599,7 @@ class PEGParser:
             return self._cache_and_return(term, position, None)
 
     def _match_core(self, string, term, position):
+        # type: (str, PEGAtom, int) -> Optional[ASTNode]
         """Parse a core syntax definition.
 
         Parameters:
@@ -583,6 +618,7 @@ class PEGParser:
         return self._cache_and_return(term, position, None)
 
     def _match_literal(self, string, term, position):
+        # type: (str, PEGAtom, int) -> Optional[ASTNode]
         """Parse a literal.
 
         Parameters:
@@ -600,6 +636,7 @@ class PEGParser:
         return self._cache_and_return(term, position, None)
 
     def _cache_and_return(self, term, position, ast):
+        # type: (str, int, Optional[ASTNode]) -> Optional[ASTNode]
         """Cache a successful parse and return the result.
 
         Parameters:
@@ -615,6 +652,7 @@ class PEGParser:
         return ast
 
     def _get_cached(self, term, position):
+        # type: (str, int) -> Optional[ASTNode]
         """Retrieve a parse from cache, if it exists.
 
         Parameters:
@@ -633,6 +671,7 @@ class PEGParser:
         return None
 
     def _debug_print(self, message):
+        # type: (str) -> None
         """Print debugging information with indentation.
 
         Parameters:
@@ -661,10 +700,11 @@ class ASTWalker:
         """Sentinel to indicate that no processing was done."""
 
     def __init__(self, parser, root_term):
+        # type: (PEGParser, str) -> None
         """Initialize the traversal.
 
         Parameters:
-            parser (ArgumentParser): The parser to use.
+            parser (PEGParser): The parser to use.
             root_term (str): The term to start parsing on.
         """
         self.parser = parser
@@ -686,6 +726,7 @@ class ASTWalker:
                     self._terms_to_expand.add(term)
 
     def _postorder_traversal(self, ast, depth=0):
+        # type: (ASTNode, int) -> Tuple[Any, bool]
         """Traverses the AST in post-order.
 
         Parameters:
@@ -711,11 +752,12 @@ class ASTWalker:
         if hasattr(self, function):
             return getattr(self, function)(ast, tuple(results)), True
         elif results:
-            return results, False
+            return tuple(results), False
         else:
             return ASTWalker.EmptySentinel(), False
 
     def parse_file(self, filepath, term=None):
+        # type: (Path, Optional[str]) -> Any
         """Parse a file with the traversal.
 
         Parameters:
@@ -730,6 +772,7 @@ class ASTWalker:
             return self.parse(fd.read(), term)
 
     def parse(self, text, term=None):
+        # type: (str, Optional[str]) -> Any
         """Parse a complete string as the term.
 
         Parameters:
@@ -746,6 +789,7 @@ class ASTWalker:
         return self.parse_ast(ast)
 
     def parse_partial(self, text, term=None):
+        # type: (str, Optional[str]) -> Tuple[Any, int]
         """Parse as much of a string as possible as the term.
 
         Parameters:
@@ -763,6 +807,7 @@ class ASTWalker:
         return self.parse_ast(ast), ast.end_pos
 
     def parse_ast(self, ast):
+        # type: (ASTNode) -> Any
         """Parse an AST.
 
         Parameters:
@@ -774,13 +819,14 @@ class ASTWalker:
         if ast is None:
             return None
         result = self._postorder_traversal(ast)[0]
-        if ast.term in self._dispatch_terms:
+        if isinstance(result, ASTWalker.EmptySentinel) or ast.term in self._dispatch_terms:
             return result
         else:
             return result[0]
 
     @staticmethod
     def term_in_definition(term, definition):
+        # type: (str, Union[PEGExpression, str]) -> bool
         """Determine if a definition could ever expand to include a term.
 
         Parameters:
@@ -807,10 +853,12 @@ class PEGWalker(ASTWalker):
     """A traversal of the PEG grammar to build up term definitions."""
 
     def __init__(self):
+        # type: () -> None
         """Initialize the traversal."""
         super().__init__(PEGParser(PEG_DEFS), 'syntax')
 
     def _parse_syntax(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGRules
         """Parse a Syntax node.
 
         Parameters:
@@ -823,6 +871,7 @@ class PEGWalker(ASTWalker):
         return {result[0]: result[1] for result in results}
 
     def _parse_definition(self, ast, results):
+        # type: (ASTNode, Tuple[str, PEGExpression]) -> Tuple[str, PEGExpression]
         """Parse a Definition node.
 
         Parameters:
@@ -835,6 +884,7 @@ class PEGWalker(ASTWalker):
         return results
 
     def _parse_choice(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse a Choice node.
 
         Parameters:
@@ -847,6 +897,7 @@ class PEGWalker(ASTWalker):
         return ('CHOICE', *results)
 
     def _parse_sequence(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse a Sequence node.
 
         Parameters:
@@ -859,6 +910,7 @@ class PEGWalker(ASTWalker):
         return ('SEQUENCE', *results)
 
     def _parse_zero_or_more(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse a zero-or-more predicate node.
 
         Parameters:
@@ -871,6 +923,7 @@ class PEGWalker(ASTWalker):
         return ('ZERO_OR_MORE', *results)
 
     def _parse_zero_or_one(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse a zero-or-one predicate node.
 
         Parameters:
@@ -883,6 +936,7 @@ class PEGWalker(ASTWalker):
         return ('ZERO_OR_ONE', *results)
 
     def _parse_one_or_more(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse a one-or-more predicate node.
 
         Parameters:
@@ -895,6 +949,7 @@ class PEGWalker(ASTWalker):
         return ('ONE_OR_MORE', *results)
 
     def _parse_and_predicate(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse an And predicate node.
 
         Parameters:
@@ -907,6 +962,7 @@ class PEGWalker(ASTWalker):
         return ('AND', *results)
 
     def _parse_not_predicate(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
         """Parse an Not predicate node.
 
         Parameters:
@@ -919,6 +975,7 @@ class PEGWalker(ASTWalker):
         return ('NOT', *results)
 
     def _parse_identifier(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> str
         """Parse an Identifier node.
 
         Parameters:
@@ -931,6 +988,7 @@ class PEGWalker(ASTWalker):
         return ast.match
 
     def _parse_builtin(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> str
         """Parse a Reserved node.
 
         Parameters:
@@ -943,6 +1001,7 @@ class PEGWalker(ASTWalker):
         return ast.match
 
     def _parse_literal(self, ast, results):
+        # type: (ASTNode, Tuple[Any, ...]) -> str
         """Parse a Literal node.
 
         Parameters:
@@ -956,6 +1015,7 @@ class PEGWalker(ASTWalker):
 
 
 def main():
+    # type: () -> None
     """Parse a grammar."""
     arg_parser = ArgumentParser()
     arg_parser.add_argument(
