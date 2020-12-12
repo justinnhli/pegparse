@@ -141,7 +141,7 @@ class ASTNode:
         """Return the starting column of the substring matched by this node."""
         return index_to_line_col(self.string, self.start_pos)[1]
 
-    def first_descendant(self, path=None):
+    def first_descendant(self, path='*'):
         """Get the first ASTNode descendant that matches the path.
 
         See the docstring for descendants() for a description of the path
@@ -153,9 +153,8 @@ class ASTNode:
         Returns:
             ASTNode: The node representing the descendant.
         """
-        path = ('*' if path is None else path).split('/')
         result = self
-        for term in path:
+        for term in path.split('/'):
             if term == '*':
                 result = result.children[0]
             else:
@@ -169,7 +168,7 @@ class ASTNode:
                     return None
         return result
 
-    def descendants(self, path=None):
+    def descendants(self, path='*'):
         """Get all ASTNode descendants that match the path.
 
         The path describes the term of each descendant separated by a '/'.
@@ -202,9 +201,8 @@ class ASTNode:
         Returns:
             ASTNode: All descendant ASTNodes that match the path.
         """
-        path = ('*' if path is None else path).split('/')
-        cur_gen = (self, )
-        for term in path:
+        cur_gen = [self,]
+        for term in path.split('/'):
             next_gen = []
             for adult in cur_gen:
                 next_gen.extend(adult.children)
