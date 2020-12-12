@@ -280,11 +280,12 @@ class PEGParser:
         Returns:
             ASTNode: The root node of the AST.
         """
-        ast, parsed = self.parse_partial(string, term)
-        if parsed == len(string):
-            return ast
-        else:
-            return self._fail_parse(string, parsed)
+        ast = self.parse_partial(string, term)
+        if not ast:
+            self._fail_parse(string, 0)
+        elif ast.end_pos != len(string):
+            self._fail_parse(string, ast.end_pos)
+        return ast
 
     def parse_partial(self, string, term):
         """Parse a string as a given term.
@@ -303,9 +304,9 @@ class PEGParser:
         self.max_trace_index = 0
         ast = self._match(string, term, 0)
         if ast:
-            return ast, ast.end_pos
+            return ast
         else:
-            return None, 0
+            return None
 
     def _add_trace(self, term, position):
         """Log the parse for error messages.
