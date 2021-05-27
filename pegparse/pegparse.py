@@ -481,7 +481,7 @@ class PEGParser:
         last_pos = position
         children = []
         ast = self._match(string, terms, last_pos)
-        while ast:
+        while ast and ast.match:
             last_pos = ast.end_pos
             children.extend(ast.children)
             ast = self._match(string, terms, last_pos)
@@ -526,7 +526,7 @@ class PEGParser:
         last_pos = ast.end_pos
         children = ast.children
         ast = self._match(string, terms, last_pos)
-        while ast:
+        while ast and ast.match:
             last_pos = ast.end_pos
             children.extend(ast.children)
             ast = self._match(string, terms, last_pos)
