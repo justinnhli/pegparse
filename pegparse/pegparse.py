@@ -374,7 +374,7 @@ class PEGParser:
         for _, term, position in self.trace[:self.max_trace_index]:
             line, col = index_to_line_col(string, position)
             trace.append('\n'.join([
-                'Failed to match {} at line {} column {} (position {})'.format(
+                'failed to match {} at line {} column {} (position {})'.format(
                     term, line, col, position
                 ),
                 '  ' + string.splitlines()[line - 1].replace('\t', ' '),
@@ -593,6 +593,7 @@ class PEGParser:
         self.depth -= 1
         if ast:
             ast.term = term
+            self._debug_print('matched {} at position {}: {}'.format(term, position, ast.match))
             return self._cache_and_return(term, position, ast)
         else:
             self._debug_print('failed to match {} at position {}'.format(term, position))
