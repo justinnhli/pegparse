@@ -592,7 +592,7 @@ class PEGParser:
         self.depth -= 1
         if ast:
             ast.term = term
-            self._debug_print('matched {} at position {}: {}'.format(term, position, ast.match))
+            self._debug_print('matched {} at position {}: {}'.format(term, position, one_line_format(ast.match[:32])))
             return self._cache_and_return(term, position, ast)
         else:
             self._debug_print('failed to match {} at position {}'.format(term, position))
