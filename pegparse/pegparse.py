@@ -77,7 +77,7 @@ def create_parser(peg, debug=False):
 
 def one_line_format(string):
     # type: (str) -> str
-    """Escape tabs and spaces in a string.
+    """Escape tabs and newlines in a string.
 
     Parameters:
         string (str): The string to escape.
@@ -85,9 +85,8 @@ def one_line_format(string):
     Returns:
         str: The escaped string.
     """
-    string = re.sub(r'\t', r'\\t', string)
-    if '\n' in string:
-        string = string[:string.index('\n')]
+    string = re.sub('\t', r'\\t', string)
+    string = re.sub('\n', r'\\n', string)
     return string
 
 
