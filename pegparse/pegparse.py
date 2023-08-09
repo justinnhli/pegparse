@@ -117,8 +117,8 @@ TraceItem = namedtuple('TraceItem', 'depth, term, position')
 class ASTNode:
     """Abstract Syntax Tree (AST) node."""
 
-    def __init__(self, term, children, string, start_pos, end_pos):
-        # type: (str, List[ASTNode], str, int, int) -> None
+    def __init__(self, term, children, filepath, string, start_pos, end_pos):
+        # type: (str, List[ASTNode], Optional[Path], str, int, int) -> None
         """Initialize the ASTNode.
 
         The string, start_pos, and end_pos arguments matches the arguments to
@@ -128,12 +128,14 @@ class ASTNode:
         Parameters:
             term (str): The term this node matches.
             children (list[ASTNode]): Children nodes of this term in the grammar.
+            filepath (Optional[Path]): The file being parsed.
             string (str): The complete string being parsed.
             start_pos (int): Index of the first character matched by this node.
             end_pos (int): Index of the last character matched by this node.
         """
         self.term = term
         self.children = children
+        self.filepath = filepath
         self.string = string
         self.start_pos = start_pos
         self.end_pos = end_pos
@@ -271,6 +273,7 @@ class PEGParser:
         """
         self.custom_defs = syntax
         self.debug = debug
+        self.filepath = None
         self.cache = {} # type: Dict[Tuple[str, int], ASTNode]
         self.depth = 0
         self.trace = [] # type: List[TraceItem]
@@ -288,38 +291,41 @@ class PEGParser:
             ASTNode: The root node of the AST.
         """
         with open(filepath) as fd:
-            return self.parse(fd.read(), term)
+            return self.parse(fd.read(), term, filepath)
 
-    def parse(self, string, term):
-        # type: (str, str) -> ASTNode
+    def parse(self, string, term, filepath=None):
+        # type: (str, str, Optional[Path]) -> ASTNode
         """Parse a string as a given term.
 
         Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
+            filepath (Optional[Path]): The file being parsed.
 
         Returns:
             ASTNode: The root node of the AST.
         """
-        ast = self.parse_partial(string, term)
+        ast = self.parse_partial(string, term, filepath)
         if not ast:
             self._fail_parse(string, 0)
         elif ast.end_pos != len(string):
             self._fail_parse(string, ast.end_pos)
         return ast
 
-    def parse_partial(self, string, term):
-        # type: (str, str) -> Optional[ASTNode]
+    def parse_partial(self, string, term, filepath=None):
+        # type: (str, str, Optional[Path]) -> Optional[ASTNode]
         """Parse a string as a given term.
 
         Parameters:
             string (str): The string to parse.
             term (str): The term to parse the string as.
+            filepath (Optional[Path]): The file being parsed.
 
         Returns:
             ASTNode: The root node of the AST.
             int: The number of characters parsed
         """
+        self.filepath = filepath
         self.cache = {}
         self.depth = 0
         self.trace = []
@@ -461,7 +467,7 @@ class PEGParser:
                 pos = child_ast.end_pos
             else:
                 return None
-        return ASTNode('SEQUENCE', children, string, position, pos)
+        return ASTNode('SEQUENCE', children, self.filepath, string, position, pos)
 
     def _match_zero_or_more(self, string, terms, position):
         # type: (str, PEGExpression, int) -> Optional[ASTNode]
@@ -484,7 +490,7 @@ class PEGParser:
             last_pos = ast.end_pos
             children.extend(ast.children)
             ast = self._match(string, terms, last_pos)
-        return ASTNode('ZERO_OR_MORE', children, string, position, last_pos)
+        return ASTNode('ZERO_OR_MORE', children, self.filepath, string, position, last_pos)
 
     def _match_zero_or_one(self, string, terms, position):
         # type: (str, PEGExpression, int) -> Optional[ASTNode]
@@ -529,7 +535,7 @@ class PEGParser:
             last_pos = ast.end_pos
             children.extend(ast.children)
             ast = self._match(string, terms, last_pos)
-        return ASTNode('ONE_OR_MORE', children, string, position, last_pos)
+        return ASTNode('ONE_OR_MORE', children, self.filepath, string, position, last_pos)
 
     def _match_and(self, string, terms, position):
         # type: (str, PEGExpression, int) -> Optional[ASTNode]
@@ -613,7 +619,7 @@ class PEGParser:
         """
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
-            ast = ASTNode(term, [], string, position, position + len(match.group(0)))
+            ast = ASTNode(term, [], self.filepath, string, position, position + len(match.group(0)))
             return self._cache_and_return(term, position, ast)
         return self._cache_and_return(term, position, None)
 
@@ -631,7 +637,7 @@ class PEGParser:
             int: The index of the last character parsed.
         """
         if string[position:].startswith(term[1:-1]):
-            ast = ASTNode(term, [], string, position, position + len(term[1:-1]))
+            ast = ASTNode(term, [], self.filepath, string, position, position + len(term[1:-1]))
             return self._cache_and_return(term, position, ast)
         return self._cache_and_return(term, position, None)
 
@@ -769,33 +775,35 @@ class ASTWalker:
             any: Whatever the parse_* functions return.
         """
         with open(filepath) as fd:
-            return self.parse(fd.read(), term)
+            return self.parse(fd.read(), term, filepath)
 
-    def parse(self, text, term=None):
-        # type: (str, Optional[str]) -> Any
+    def parse(self, text, term=None, filepath=None):
+        # type: (str, Optional[str], Optional[Path]) -> Any
         """Parse a complete string as the term.
 
         Parameters:
             text (str): The text to parse.
             term (str): The term to start parsing on. Defaults to the term from
                 the constructor.
+            filepath (Optional[Path]): The file being parsed.
 
         Returns:
             any: Whatever the parse_* functions return.
         """
         if term is None:
             term = self.root_term
-        ast = self.parser.parse(text, term)
+        ast = self.parser.parse(text, term, filepath)
         return self.parse_ast(ast)
 
-    def parse_partial(self, text, term=None):
-        # type: (str, Optional[str]) -> Tuple[Any, int]
+    def parse_partial(self, text, term=None, filepath=None):
+        # type: (str, Optional[str], Optional[Path]) -> Tuple[Any, int]
         """Parse as much of a string as possible as the term.
 
         Parameters:
             text (str): The text to parse.
             term (str): The term to start parsing on. Defaults to the term from
                 the constructor.
+            filepath (Optional[Path]): The file being parsed.
 
         Returns:
             any: Whatever the parse_* functions return.
@@ -803,7 +811,7 @@ class ASTWalker:
         """
         if term is None:
             term = self.root_term
-        ast = self.parser.parse_partial(text, term)
+        ast = self.parser.parse_partial(text, term, filepath)
         return self.parse_ast(ast), ast.end_pos
 
     def parse_ast(self, ast):
