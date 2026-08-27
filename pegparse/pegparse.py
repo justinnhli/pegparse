@@ -273,7 +273,7 @@ class PEGParser:
         """
         self.custom_defs = syntax
         self.debug = debug
-        self.filepath = None
+        self.filepath = None # type: Path
         self.cache = {} # type: Dict[Tuple[str, int], ASTNode]
         self.depth = 0
         self.trace = [] # type: List[TraceItem]
