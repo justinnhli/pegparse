@@ -537,25 +537,6 @@ class PEGParser:
             ast = self._match(string, terms, last_pos)
         return ASTNode('ONE_OR_MORE', children, self.filepath, string, position, last_pos)
 
-    def _match_and(self, string, terms, position):
-        # type: (str, PEGExpression, int) -> Optional[ASTNode]
-        """Parse the negation of a term.
-
-        Parameters:
-            string (str): The string to parse.
-            terms (list[str]): The first item (index 0) is the term to match;
-                all subsequent items are terms to *not* match. FIXME
-            position (int): The position which with to start the parse.
-
-        Returns:
-            ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
-        """
-        ast = self._match(string, terms[1], position)
-        if not ast:
-            return None
-        return self._match(string, 'EMPTY', position)
-
     def _match_not(self, string, terms, position):
         # type: (str, PEGExpression, int) -> Optional[ASTNode]
         """Parse the negation of a term.
