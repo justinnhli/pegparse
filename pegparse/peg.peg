@@ -24,16 +24,16 @@ paren         = "(" opt_space expression opt_space ")";
 atom          = identifier
               | builtin
               | literal;
-identifier    = ( LOWER )+ ( "_" ( LOWER )+ )*;
-builtin       = ( UPPER )+;
+identifier    = LOWER+ ( "_" LOWER+ )*;
+builtin       = UPPER+;
 literal       = d_string
               | s_string;
 d_string      = '"' ( !( '"' ) PRINT )* '"';
 s_string      = "'" ( !( "'" ) PRINT )* "'";
 
 # whitespace
-opt_space     = ( space )*;
-req_space     = ( space )+;
-space         = "#" ( PRINT )* NEWLINE
+opt_space     = space*;
+req_space     = space+;
+space         = "#" PRINT* NEWLINE
               | BLANK
               | NEWLINE;
