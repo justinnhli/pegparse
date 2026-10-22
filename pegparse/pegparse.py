@@ -944,7 +944,10 @@ class PEGWalker(ASTWalker):
         Returns:
             tuple[str]: A repetition definition.
         """
-        return ('ZERO_OR_MORE', *results)
+        if len(results) == 1 and results[0][0] == 'ZERO_OR_MORE':
+            return results[0]
+        else:
+            return ('ZERO_OR_MORE', *results)
 
     def _parse_zero_or_one(self, ast, results):
         # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
@@ -957,7 +960,10 @@ class PEGWalker(ASTWalker):
         Returns:
             tuple[str]: A repetition definition.
         """
-        return ('ZERO_OR_ONE', *results)
+        if len(results) == 1 and results[0][0] == 'ZERO_OR_ONE':
+            return results[0]
+        else:
+            return ('ZERO_OR_ONE', *results)
 
     def _parse_one_or_more(self, ast, results):
         # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression
@@ -970,7 +976,10 @@ class PEGWalker(ASTWalker):
         Returns:
             tuple[str]: A repetition definition.
         """
-        return ('ONE_OR_MORE', *results)
+        if len(results) == 1 and results[0][0] == 'ONE_OR_MORE':
+            return results[0]
+        else:
+            return ('ONE_OR_MORE', *results)
 
     def _parse_and_predicate(self, ast, results):
         # type: (ASTNode, Tuple[Any, ...]) -> PEGExpression

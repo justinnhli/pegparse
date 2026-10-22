@@ -68,7 +68,6 @@ def test_ast_structure():
     _test_descendants('ef', 'a', '*', ['e', 'f'])
 
 
-
 def test_peg_walker():
     with open(PEG_GRAMMAR) as fd:
         text = fd.read()
@@ -133,12 +132,24 @@ def test_anbncn():
                     pass
 
 
+def test_nesting_equivalence():
+    for symbol in '?*+':
+        parsers = []
+        for num_parens in range(4):
+            l_parens = num_parens * '( '
+            r_parens = num_parens * f' ){symbol}'
+            parsers.append(create_parser(f'bang = {l_parens}"!"{symbol}{r_parens};'))
+        defs1 = parsers[0].custom_defs
+        assert all(parser.custom_defs == defs1 for parser in parsers)
+
+
 def main():
     test_ast_structure()
     test_peg_walker()
     test_peg_representation()
     test_trace()
     test_anbncn()
+    test_nesting_equivalence()
 
 
 if __name__ == '__main__':
