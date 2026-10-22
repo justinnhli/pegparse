@@ -16,7 +16,6 @@ PEGOperator = Literal['CHOICE', 'SEQUENCE', 'ZERO_OR_MORE', 'ZERO_OR_ONE', 'ONE_
 PEGExpression = Tuple[Any, ...] # should be Union[Tuple[PEGOperator, PEGExpression, ...], PEGAtom]
 PEGRules = Dict[str, PEGExpression]
 
-PEG_OPERATOR_STRS = set(get_type_args(PEGOperator))
 PEG_GRAMMAR = Path(__file__).parent / 'peg.peg'
 
 # pylint: disable=line-too-long
@@ -407,21 +406,31 @@ class PEGParser:
         Raises:
             NameError: If the terminal is unknown.
         """
+        ast = self._get_cached(term, position)
+        if ast:
+            return ast
         if isinstance(term, tuple) and hasattr(self, '_match_{}'.format(term[0].lower())):
-            return getattr(self, '_match_{}'.format(term[0].lower()))(string, term, position)
+            ast = getattr(self, '_match_{}'.format(term[0].lower()))(string, term, position)
         elif isinstance(term, str):
-            ast = self._get_cached(term, position)
-            if ast:
-                return ast
-            elif term in self.custom_defs:
-                return self._match_custom(string, term, position)
+            if term in self.custom_defs:
+                ast = self._match_custom(string, term, position)
             elif term in PEGParser.CORE_DEFS:
-                return self._match_core(string, term, position)
+                ast = self._match_core(string, term, position)
             elif re.match(r"^'[^']*'$", term) or re.match(r'^"[^"]*"$', term):
-                return self._match_literal(string, term, position)
+                ast = self._match_literal(string, term, position)
             else:
                 raise NameError('Unknown terminal {}'.format(term))
-        raise NameError('Unknown meta-terminal {}'.format(term))
+        else:
+            raise NameError('Unknown meta-terminal {}'.format(term))
+        if ast:
+            new_children = []
+            for child in ast.children:
+                if child.term[0].islower():
+                    new_children.append(child)
+                else:
+                    new_children.extend(child.children)
+            ast.children = new_children
+        return ast
 
     def _match_choice(self, string, terms, position):
         # type: (str, PEGExpression, int) -> Optional[ASTNode]
@@ -458,10 +467,7 @@ class PEGParser:
         for term in terms[1:]:
             child_ast = self._match(string, term, pos)
             if child_ast:
-                if child_ast.term in PEG_OPERATOR_STRS:
-                    children.extend(child_ast.children)
-                else:
-                    children.append(child_ast)
+                children.append(child_ast)
                 pos = child_ast.end_pos
             else:
                 return None
