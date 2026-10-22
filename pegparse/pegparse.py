@@ -403,7 +403,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of the AST.
-            int: The number of characters successfully parsed.
 
         Raises:
             NameError: If the terminal is unknown.
@@ -435,7 +434,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         for term in terms[1:]:
             ast = self._match(string, term, position)
@@ -454,7 +452,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         children = []
         pos = position
@@ -481,7 +478,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         terms = terms[1]
         last_pos = position
@@ -504,7 +500,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         terms = terms[1]
         ast = self._match(string, terms, position)
@@ -523,7 +518,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         terms = terms[1]
         ast = self._match(string, terms, position)
@@ -552,7 +546,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         ast = self._match(string, terms[1], position)
         if not ast:
@@ -573,7 +566,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         ast = self._match(string, terms[1], position)
         if ast:
@@ -591,7 +583,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         expression = self.custom_defs[term]
         self._debug_print('parsing {} at position {} >>>{}'.format(
@@ -620,7 +611,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         match = re.match(PEGParser.CORE_DEFS[term], string[position:])
         if match:
@@ -639,7 +629,6 @@ class PEGParser:
 
         Returns:
             ASTNode: The root node of this abstract syntax sub-tree.
-            int: The index of the last character parsed.
         """
         if string[position:].startswith(term[1:-1]):
             ast = ASTNode(term, [], self.filepath, string, position, position + len(term[1:-1]))
@@ -657,7 +646,6 @@ class PEGParser:
 
         Returns:
             None: The absence of an ASTNode.
-            int: The index of the last character parsed.
         """
         self.cache[(term, position)] = ast
         return ast
@@ -672,7 +660,6 @@ class PEGParser:
 
         Returns:
             None: The absence of an ASTNode.
-            int: The index of the last character parsed.
         """
         if (term, position) in self.cache:
             if term in self.custom_defs:
