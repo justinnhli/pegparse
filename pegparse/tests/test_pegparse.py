@@ -23,6 +23,7 @@ def test_ast_structure():
 
     def _test_descendants(string, term, path, expected):
         ast = parser.parse(string, term)
+        #ast.pretty_print()
         actual = [node.match for node in ast.descendants(path)]
         assert_equal(
             expected,
