@@ -140,6 +140,15 @@ class ASTNode:
         self.start_pos = start_pos
         self.end_pos = end_pos
 
+    def __eq__(self, other):
+        # type: (Any) -> bool
+        return (
+            isinstance(other, ASTNode)
+            and self.term == other.term
+            and self.string == other.string
+            and self.children == other.children
+        )
+
     @property
     def match(self):
         # type: () -> str
