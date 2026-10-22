@@ -9,13 +9,14 @@ from collections import namedtuple
 from fileinput import input as fileinput
 from pathlib import Path
 from textwrap import indent
-from typing import Any, Optional, Union, Literal, Tuple, List, Dict
+from typing import Any, Optional, Union, Literal, Tuple, List, Dict, get_args as get_type_args
 
 PEGAtom = str
 PEGOperator = Literal['CHOICE', 'SEQUENCE', 'ZERO_OR_MORE', 'ZERO_OR_ONE', 'ONE_OR_MORE', 'AND', 'NOT'] # pylint: disable = unsubscriptable-object
 PEGExpression = Tuple[Any, ...] # should be Union[Tuple[PEGOperator, PEGExpression, ...], PEGAtom]
 PEGRules = Dict[str, PEGExpression]
 
+PEG_OPERATOR_STRS = set(get_type_args(PEGOperator))
 PEG_GRAMMAR = Path(__file__).parent / 'peg.peg'
 
 # pylint: disable=line-too-long
@@ -460,7 +461,7 @@ class PEGParser:
         for term in terms[1:]:
             child_ast = self._match(string, term, pos)
             if child_ast:
-                if isinstance(term, tuple):
+                if child_ast.term in PEG_OPERATOR_STRS:
                     children.extend(child_ast.children)
                 else:
                     children.append(child_ast)
