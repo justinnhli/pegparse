@@ -610,7 +610,7 @@ class PEGParser:
             if ast.term[0].islower():
                 ast = ASTNode(term, [ast], ast.filepath, ast.string, ast.start_pos, ast.end_pos)
             else:
-                ast.term = term
+                ast = ASTNode(term, ast.children, ast.filepath, ast.string, ast.start_pos, ast.end_pos)
             self._debug_print(f'matched {term} at position {position}: {one_line_format(ast.match[:32])}')
             return self._cache_and_return(term, position, ast)
         else:

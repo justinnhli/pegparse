@@ -143,6 +143,16 @@ def test_nesting_equivalence():
         assert all(parser.custom_defs == defs1 for parser in parsers)
 
 
+def test_cache_corruption():
+    parser = create_parser(dedent('''
+        parent = child BLANK?;
+        child = "A" grandchild;
+        grandchild = "B"?;
+    '''.lstrip('\n').rstrip(' ')))
+    ast = parser.parse('A', 'parent')
+    assert len(ast.children) == 1
+
+
 def main():
     test_ast_structure()
     test_peg_walker()
@@ -150,6 +160,7 @@ def main():
     test_trace()
     test_anbncn()
     test_nesting_equivalence()
+    test_cache_corruption()
 
 
 if __name__ == '__main__':
